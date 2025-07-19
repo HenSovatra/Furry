@@ -1,0 +1,114 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %} {% if page_title %} {{ page_title }} {% else %} Dynamic DataTables {% endif %} {% endblock title %} 
+
+{% block content %}
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Available Routes Section -->
+        <div class="col-sm-12 mb-4"> {# Added mb-4 for spacing #}
+            <div class="card">
+                <div class="card-header">
+                    <h5>
+                        Available Routes - defined in <strong>settings.DYNAMIC_DATATB</strong> - Read <a target="_blank" href="https://app-generator.dev/docs/developer-tools/dynamic-datatables.html">Documentation</a>.
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        {% for link in routes %}
+                            <li>
+                                <a href="{% url "Admin:model_dt" link %}">{{ link }}</a>
+                            </li>    
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section - Added Here -->
+        <div class="col-sm-12 col-md-6 mb-4"> {# Added mb-4 for spacing #}
+            <div class="card">
+                <div class="card-header">
+                    <h5>Bar Chart</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div id="bar-chart"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-12 col-md-6 mb-4"> {# Added mb-4 for spacing #}
+            <div class="card">
+                <div class="card-header">
+                    <h5>Pie Chart</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div id="pie-chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 
+
+{% endblock content %}
+
+
+{% block extra_js %}
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Dummy data for demonstration purposes
+    var products = [
+      { fields: { name: 'Pug', price: 150 } },
+      { fields: { name: 'Bulldog', price: 220 } },
+      { fields: { name: 'Beagle', price: 180 } },
+      { fields: { name: 'Rottweiler', price: 250 } },
+      { fields: { name: 'Labrador', price: 300 } }
+    ];
+
+    var names = products.map(p => p.fields.name);
+    var prices = products.map(p => p.fields.price);
+
+    // Bar Chart Options
+    var barOptions = {
+      chart: { type: 'bar', height: 350, toolbar: { show: false } },
+      series: [{ name: 'Price', data: prices }],
+      xaxis: { categories: names },
+      plotOptions: {
+        bar: {
+          borderRadius: 5,
+          horizontal: false,
+        }
+      },
+      dataLabels: { enabled: false },
+      tooltip: { enabled: true },
+      colors: ['#4CAF50'], // Example color
+      grid: { show: false }
+    };
+    var barChart = new ApexCharts(document.querySelector("#bar-chart"), barOptions);
+    barChart.render();
+
+    // Pie Chart Options
+    var pieOptions = {
+      chart: { type: 'pie', height: 350, toolbar: { show: false } },
+      series: prices,
+      labels: names,
+      responsive: [{
+        breakpoint: 480,
+        options: {
+          chart: { width: 200 },
+          legend: { position: 'bottom' }
+        }
+      }],
+      dataLabels: { enabled: true },
+      tooltip: { enabled: true },
+    };
+    var pieChart = new ApexCharts(document.querySelector("#pie-chart"), pieOptions);
+    pieChart.render();
+  });
+</script>
+
+{% endblock extra_js %}

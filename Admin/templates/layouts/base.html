@@ -1,0 +1,149 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Your Dashboard{% endblock title %}</title>
+
+    <link rel="stylesheet" href="{% static 'assets/css/nucleo-icons.css' %}" />
+    <link rel="stylesheet" href="{% static 'assets/css/nucleo-svg.css' %}" />
+    <link
+      rel="stylesheet"
+      href="{% static 'assets/css/argon-dashboard.css' %}?v=2.0.4"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+
+    {% block extrastyle %}
+    {% endblock extrastyle %}
+  </head>
+  <body class="g-sidenav-show bg-gray-100">
+    {# This is where your sidebar gets included #}
+    {% include 'includes/sidebar.html' %} {# This path is relative to the DIRS entry #}
+
+    <main class="main-content position-relative border-radius-lg">
+      <nav
+        class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl"
+        id="navbarBlur"
+        data-scroll="false"
+      >
+        <div class="container-fluid py-1 px-3">
+          <nav aria-label="breadcrumb">
+            <ol
+              class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5"
+            >
+              <li class="breadcrumb-item text-sm">
+                <a class="opacity-5 text-white" href="javascript:;">Pages</a>
+              </li>
+              <li
+                class="breadcrumb-item text-sm text-white active"
+                aria-current="page"
+              >
+                {% block breadcrumb_page %}{% endblock breadcrumb_page %}
+              </li>
+            </ol>
+            <h6 class="font-weight-bolder text-white mb-0">
+              {% block breadcrumb_title %}{% endblock breadcrumb_title %}
+            </h6>
+          </nav>
+          <div
+            class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4"
+            id="navbar"
+          >
+            <div class="ms-md-auto pe-md-3 d-flex align-items-center">
+            </div>
+            <ul class="navbar-nav justify-content-end">
+            </ul>
+          </div>
+        </div>
+      </nav>
+      <div class="container-fluid py-4">
+        {% block content %}
+        {% endblock content %}
+
+        <footer class="footer pt-3">
+          <div class="container-fluid">
+            <div class="row align-items-center justify-content-lg-between">
+              <div class="col-lg-6 mb-lg-0 mb-4">
+                <div
+                  class="copyright text-center text-sm text-muted text-lg-start"
+                >
+                  ©
+                  <script>
+                    document.write(new Date().getFullYear());
+                  </script>
+                  , made with <i class="fa fa-heart"></i> by
+                  <a
+                    href="https://www.creative-tim.com"
+                    class="font-weight-bold"
+                    target="_blank"
+                    >Furry Team</a
+                  >
+                  for a better web.
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <ul
+                  class="nav nav-footer justify-content-center justify-content-lg-end"
+                >
+                  <li class="nav-item">
+                    <a
+                      href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=0gcJCfwAo7VqN5tD"
+                      class="nav-link text-muted"
+                      target="_blank"
+                      >Furry Team</a
+                    >
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=0gcJCfwAo7VqN5tD"
+                      class="nav-link text-muted"
+                      target="_blank"
+                      >About Us</a
+                    >
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=0gcJCfwAo7VqN5tD"
+                      class="nav-link text-muted"
+                      target="_blank"
+                      >Blog</a
+                    >
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=0gcJCfwAo7VqN5tD"
+                      class="nav-link pe-0 text-muted"
+                      target="_blank"
+                      >License</a
+                    >
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </main>
+
+    <script src="{% static 'assets/js/core/popper.min.js' %}"></script>
+    <script src="{% static 'assets/js/core/bootstrap.min.js' %}"></script>
+    <script src="{% static 'assets/js/plugins/perfect-scrollbar.min.js' %}"></script>
+    <script src="{% static 'assets/js/plugins/smooth-scrollbar.min.js' %}"></script>
+    <script src="{% static 'assets/js/argon-dashboard.min.js' %}?v=2.0.4"></script>
+
+    {% block extra_js %}
+    {% endblock extra_js %}
+
+    <script>
+      var win = navigator.platform.indexOf("Win") > -1;
+      if (win && document.querySelector("#sidenav-main")) {
+        var ps = new PerfectScrollbar("#sidenav-main");
+      }
+    </script>
+  </body>
+</html>

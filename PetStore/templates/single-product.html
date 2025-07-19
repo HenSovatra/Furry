@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.name }} - Product Details</title>
+</head>
+<body>
+    <main>
+        <section class="product-detail">
+            <h1>{{ product.name }}</h1>
+            <p class="price">${{ product.price }}</p>
+            </section>
+
+        <section class="related-products">
+            <h2>Related Products</h2>
+            <div class="product-grid">
+                If you add related products to context in single_product_view:
+                {% for related_product in related_products %}
+                    <div class="product-card">
+                        <img src="{{ related_product.image.url }}" alt="{{ related_product.name }}">
+                        <h3>
+                            <a href="{% url 'PetStore:single_product' pk=related_product.pk %}">{{ related_product.name }}</a>
+                        </h3>
+                        <p>${{ related_product.price }}</p>
+                    </div>
+                {% endfor %}
+                <p>No related products found.</p>
+            </div>
+        </section>
+    </main>
+
+    </body>
+</html>

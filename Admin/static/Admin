@@ -1,0 +1,4 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'Admin/css/your-dashboard-style.css' %}">
+<script src="{% static 'Admin/js/your-dashboard-script.js' %}"></script>
+<img src="{% static 'Admin/img/your-image.png' %}" alt="Image">

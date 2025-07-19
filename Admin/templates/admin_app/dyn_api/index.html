@@ -1,0 +1,55 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Dynamic API Endpoints{% endblock title %}
+
+{% block breadcrumb_page %}Dynamic API{% endblock breadcrumb_page %}
+{% block breadcrumb_title %}API Endpoints{% endblock breadcrumb_title %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Available API Endpoints</h5>
+                    <p>Interact with your data programmatically. For full documentation, refer to your API docs.</p>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for route in routes %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <code>/admin/dynamic-api/{{ route }}/</code>
+                                <a href="{% url 'Admin:model_api' model_name=route %}" target="_blank" class="btn btn-sm btn-info">Test GET</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="mt-4">
+                        <h6>Example Usage (JavaScript Fetch API)</h6>
+                        <pre><code class="language-javascript">
+fetch('/admin/dynamic-api/products/')
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
+
+// Example POST request
+fetch('/admin/dynamic-api/products/', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': 'YOUR_CSRF_TOKEN_HERE', // Get this from Django's csrf_token tag
+    },
+    body: JSON.stringify({ name: 'New Product', price: 99.99, stock: 100 })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+                        </code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

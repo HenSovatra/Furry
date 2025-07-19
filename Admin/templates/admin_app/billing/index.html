@@ -1,0 +1,120 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Billing Management{% endblock title %}
+
+{% block breadcrumb_page %}Billing{% endblock breadcrumb_page %}
+{% block breadcrumb_title %}Billing Overview{% endblock breadcrumb_title %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Invoices</h5>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addInvoiceModal">Add New Invoice</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-items-center mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Invoice #</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Customer</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Amount</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Issue Date</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Due Date</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
+                                    <th class="text-secondary opacity-7">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex px-2 py-1">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ invoice.invoice_number }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <p class="text-xs font-weight-bold mb-0">{{ invoice.customer.first_name }} {{ invoice.customer.last_name }}</p>
+                                    </td>
+                                    <td>
+                                        <p class="text-xs font-weight-bold mb-0">${{ invoice.amount|floatformat:2 }}</p>
+                                    </td>
+                                    <td>
+                                        <p class="text-xs font-weight-bold mb-0">{{ invoice.issue_date|date:"Y-m-d" }}</p>
+                                    </td>
+                                    <td>
+                                        <p class="text-xs font-weight-bold mb-0">{{ invoice.due_date|date:"Y-m-d" }}</p>
+                                    </td>
+                                    <td class="align-middle text-center text-sm">
+                                        <span class="badge badge-sm bg-gradient-{% if invoice.is_paid %}success{% else %}warning{% endif %}">{{ invoice.get_is_paid_display|default:"Unpaid" }}</span>
+                                    </td>
+                                    <td class="align-middle">
+                                        <a href="#" class="text-secondary font-weight-bold text-xs" data-toggle="tooltip" data-original-title="Edit invoice">
+                                            Edit
+                                        </a> |
+                                        <a href="#" class="text-secondary font-weight-bold text-xs text-danger" data-toggle="tooltip" data-original-title="Delete invoice">
+                                            Delete
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No invoices found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addInvoiceModal" tabindex="-1" aria-labelledby="addInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addInvoiceModalLabel">Add New Invoice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="#"> {# Action to your invoice creation view #}
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="customer" class="form-label">Customer</label>
+                        <select class="form-control" id="customer" name="customer">
+                            {% for customer in customers %} {# You'd need to pass 'customers' to context #}
+                            <option value="{{ customer.id }}">{{ customer.first_name }} {{ customer.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Amount</label>
+                        <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="due_date" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="due_date" name="due_date" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="True" id="is_paid" name="is_paid">
+                        <label class="form-check-label" for="is_paid">
+                            Paid
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Invoice</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
