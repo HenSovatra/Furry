@@ -1,12 +1,13 @@
 # myproject/blog/views.py
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from .models import *
 import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt 
-
+from django.views.decorators.csrf import csrf_protect 
+from django.db import transaction
 def CategoryView(request):
     main_menu_items = MenuItem.objects.filter(parent__isnull=True, is_active=True).order_by('order').prefetch_related('children')
 
@@ -140,3 +141,37 @@ def get_cart_details(request):
         'cart_total_price': float(cart.total_price) if cart else 0.0,
         'cart_total_items': cart.total_items if cart else 0,
     })
+
+@csrf_protect # Good practice for rendering forms that will POST
+def checkout_view(request):
+    cart = None
+    if request.user.is_authenticated:
+        cart = Cart.objects.filter(user=request.user).first()
+    else:
+        session_key = request.session.session_key
+        if session_key:
+            cart = Cart.objects.filter(session_key=session_key).first()
+
+    if not cart or cart.items.count() == 0:
+        return redirect('PetStore:home') # Redirect to cart view or home
+
+    # No context data related to cart passed here.
+    # The checkout.html template will fetch it via JS.
+    return render(request, 'checkout.html')
+
+        
+def order_confirmation_view(request, order_id=None):
+    order = None
+    if order_id:
+        # Try to retrieve the order, ensuring it belongs to the current user/session
+        if request.user.is_authenticated:
+            order = get_object_or_404(Order, id=order_id, user=request.user)
+        else:
+            session_key = request.session.session_key
+            if session_key:
+                order = get_object_or_404(Order, id=order_id, session_key=session_key)
+
+    context = {
+        'order': order,
+    }
+    return render(request, 'order_confirmation.html', context)

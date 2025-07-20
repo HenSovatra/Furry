@@ -337,41 +337,180 @@
     var fetchAndRenderCartDetails = function() {
         const $cartDialogContent = $('#cart-dialog-content');
         const $cartDialogTotalPrice = $('#cart-dialog-total-price');
+        const $cartTotalItemsCount = $('.cart-total-items-count'); // Assuming you have an element for this
+        const $cartDialogCheckoutBtn = $('#cart-dialog-checkout-btn'); // Assuming you have a checkout button
 
         $cartDialogContent.html('<p class="text-center text-muted">Loading cart...</p>'); // Show loading state
 
         $.ajax({
-            url: '/get-cart-details/', // Your Django URL to get cart details
+            // IMPORTANT: Use Django's URL reversing for robustness
+            url: 'api/cart/', // Correct Django URL for cart details
             method: 'GET',
             dataType: 'json',
             success: function(response) {
+                console.log(response); // Keep this for debugging
+
+                let cartHtml = '';
                 if (response.cart_items && response.cart_items.length > 0) {
-                    let cartHtml = '<ul class="list-group list-group-flush">';
+                    cartHtml = '<ul class="list-group list-group-flush">';
                     response.cart_items.forEach(item => {
+                        // Ensure product image URL is correctly accessed (from serializer)
+                        const imageUrl = item.product.image || '/static/images/placeholder.png';
+                        // Ensure current_price is correctly accessed and formatted
+                        console.log(item.product);
+                        const unitPrice = item.product.original_price !== undefined && item.product.original_price !== null
+                                        ? parseInt(item.product.discounted_price??item.product.original_price).toFixed(2) : '0.00';
+                        // Ensure total_price is correctly accessed and formatted
+                        const itemTotalPrice = item.total_price !== undefined && item.total_price !== null
+                                            ? item.total_price.toFixed(2) : '0.00';
+
                         cartHtml += `
-                            <li class="list-group-item d-flex align-items-center">
-                                <img src="${item.product_image_url || '/static/images/placeholder.png'}" alt="${item.product_name}" class="img-fluid me-3" style="width: 60px; height: 60px; object-fit: cover;">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-0">${item.product_name}</h6>
-                                    <small class="text-muted">Quantity: ${item.quantity} | Price: $${item.price.toFixed(2)}</small>
+                            <li class="list-group-item d-flex justify-content-between align-items-center cart-item-row" data-product-id="${item.product.id}">
+                                <div class="d-flex align-items-center">
+                                    <img src="${imageUrl}" alt="${item.product.name}" class="img-thumbnail me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                    <div>
+                                        <h6 class="my-0">${item.product.name}</h6>
+                                        <div class="d-flex align-items-center mt-1">
+                                            <small class="text-muted me-2">Qty:</small>
+                                            <div class="input-group input-group-sm" style="width: 100px;">
+                                                <button class="btn btn-outline-secondary decrement-qty-btn" type="button" data-product-id="${item.product.id}">-</button>
+                                                <input type="text" class="form-control text-center quantity-display" value="${item.quantity}" readonly>
+                                                <button class="btn btn-outline-secondary increment-qty-btn" type="button" data-product-id="${item.product.id}">+</button>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Unit Price: $${unitPrice}</small>
+                                    </div>
                                 </div>
-                                <span class="fw-bold">$${item.total_item_price.toFixed(2)}</span>
+                                <div class="d-flex flex-column align-items-end">
+                                    <span class="fw-bold mb-2">$${itemTotalPrice}</span>
+                                    <button type="button" class="btn btn-danger btn-sm remove-from-cart-btn" data-product-id="${item.product.id}">
+                                        Remove
+                                    </button>
+                                </div>
                             </li>
                         `;
                     });
                     cartHtml += '</ul>';
-                    $cartDialogContent.html(cartHtml);
+                    $cartDialogCheckoutBtn.removeClass('disabled'); // Enable checkout button
                 } else {
-                    $cartDialogContent.html('<p class="text-center text-muted">Your cart is empty.</p>');
+                    cartHtml = '<p class="text-center text-muted py-5">Your cart is empty.</p>';
+                    $cartDialogCheckoutBtn.addClass('disabled'); // Disable checkout button
                 }
-                $cartDialogTotalPrice.text(`$${response.cart_total_price.toFixed(2)}`);
-                updateCartCount(response.cart_total_items); // Update global counter
+
+                $cartDialogContent.html(cartHtml);
+                // Ensure total is formatted to 2 decimal places
+                $cartDialogTotalPrice.text(`$${response.total.toFixed(2)}`);
+                updateCartCount(response.total_items); // Update global counter
+                
             },
             error: function(xhr, status, error) {
-                console.error('Error fetching cart details:', status, error);
-                $cartDialogContent.html('<p class="text-danger text-center">Failed to load cart. Please try again.</p>');
+                console.error('Error fetching cart details:', status, error, xhr.responseText);
+                $cartDialogContent.html('<p class="text-danger text-center py-5">Failed to load cart. Please try again.</p>');
+                $cartDialogTotalPrice.text(`$0.00`); // Show 0.00 on error
                 updateCartCount(0); // Reset counter on error
             }
+        });
+    };
+
+    var updateCartItemQuantity = function(productId, change) {
+        const $qtyInput = $(`#cart-dialog-content .cart-item-row[data-product-id="${productId}"] input.quantity-display`);
+        const currentQuantity = parseInt($qtyInput.val());
+        let newQuantity = currentQuantity + change;
+
+        // Special handling for decrementing from 1 to 0 (which means remove)
+        if (newQuantity <= 0) {
+            if (currentQuantity === 1 && change === -1) { // If going from 1 to 0 by decrement
+                removeCartItem(productId); // Remove completely
+                return;
+            }
+            newQuantity = 0; // Prevent negative quantity in input
+        }
+
+        // Disable buttons for feedback during AJAX call (optional)
+        const $cartItemRow = $(`#cart-dialog-content .cart-item-row[data-product-id="${productId}"]`);
+        $cartItemRow.find('button').prop('disabled', true);
+
+        $.ajax({
+            url: 'api/cart/update-quantity/', // Django URL
+            method: 'POST',
+            data: JSON.stringify({ // Send data as JSON
+                'product_id': productId,
+                'quantity': newQuantity // Send the *absolute new quantity*
+            }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken') // IMPORTANT for POST requests
+            },
+            success: function(response) {
+                if (response.success) {
+                    fetchAndRenderCartDetails(); // Re-render the cart on success
+                    updateCartCount(response.cart_total_items); // Update main cart count display
+                } else {
+                    alert('Error updating quantity: ' + (response.error || 'An unknown error occurred.'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Update cart quantity error:', status, error, xhr.responseText);
+                alert('Failed to update cart quantity. Please try again.');
+            },
+            complete: function() {
+                $cartItemRow.find('button').prop('disabled', false); // Re-enable buttons
+            }
+        });
+    };
+
+    var removeCartItem = function(productId) {
+        if (!confirm('Are you sure you want to remove this item from your cart?')) {
+            return;
+        }
+
+        const $cartItemRow = $(`#cart-dialog-content .cart-item-row[data-product-id="${productId}"]`);
+        $cartItemRow.find('button').prop('disabled', true).text('Removing...'); // Disable and change text
+
+        $.ajax({
+            url: 'api/cart/remove/', // Django URL
+            method: 'POST',
+            data: JSON.stringify({
+                'product_id': productId
+            }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken') // IMPORTANT
+            },
+            success: function(response) {
+                if (response.success) {
+                    fetchAndRenderCartDetails(); // Re-render the cart on success
+                    updateCartCount(response.cart_total_items); // Update main cart count display
+                } else {
+                    alert('Error removing item: ' + (response.error || 'An unknown error occurred.'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Remove cart item error:', status, error, xhr.responseText);
+                alert('Failed to remove item from cart. Please try again.');
+            }
+            // 'complete' not needed here as fetchAndRenderCartDetails will rebuild the HTML
+        });
+    };
+
+
+    var initCartItemControls = function() {
+        // Decrement quantity button (-)
+        $(document).on('click', '.decrement-qty-btn', function() {
+            const productId = $(this).data('product-id');
+            updateCartItemQuantity(productId, -1); // Call the update function with change -1
+        });
+
+        // Increment quantity button (+)
+        $(document).on('click', '.increment-qty-btn', function() {
+            const productId = $(this).data('product-id');
+            updateCartItemQuantity(productId, 1); // Call the update function with change +1
+        });
+
+        // Remove item button
+        $(document).on('click', '.remove-from-cart-btn', function() {
+            const productId = $(this).data('product-id');
+            removeCartItem(productId); // Call the remove function
         });
     };
 
@@ -394,7 +533,7 @@
                 $button.prop('disabled', true).text('Adding...');
 
                 $.ajax({
-                    url: '/add-to-cart/', // Your Django URL for add to cart
+                    url: 'api/cart/add/', // Your Django URL for add to cart
                     method: 'POST',
                     data: JSON.stringify({
                         'product_id': productId,
@@ -427,7 +566,7 @@
                     },
                     complete: function() {
                         // Re-enable button
-                        $button.prop('disabled', false).html('<svg width="18" height="18"><use xlink:href="#cart"></use></svg> Add to Cart');
+                        $button.prop('disabled', false).html('Add to Cart');
                     }
                 });
             } else {
@@ -441,18 +580,105 @@
         });
     };
 
+
+    var fetchAndRenderProducts = function() {
+        const $productListContainer = $('#product-list-container');
+        // Display a loading message while fetching data
+        $productListContainer.html('<p class="text-center text-muted py-5">Loading products...</p>');
+
+        // Make an AJAX request to your Django API endpoint for products
+        $.ajax({
+            url: '/api/products/', // Make sure this URL is correctly configured in Django's urls.py
+            method: 'GET',
+            dataType: 'json', // Expect a JSON response
+            success: function(response) {
+                // Check if the response contains products and if there are any
+                if (response && response.length > 0) {
+                    $productListContainer.empty(); // Clear the loading message
+
+                    // Loop through each product in the response
+                    response.forEach(function(product) {
+                        // Construct the HTML for each product using template literals
+                        // Ensure that product properties (like product.id, product.name, etc.)
+                        // match the keys in the JSON response from your Django API.
+                        const productHtml = `
+                            <div class="col">
+                                <div class="product-item mb-4">
+                                    <figure>
+                                        <a href="#" class="open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="${product.id}" title="${product.name}">
+                                            <img src="${product.image}" alt="${product.name}" class="tab-image img-fluid rounded-3">
+                                        </a>
+                                    </figure>
+                                    <div class="d-flex flex-column text-center">
+                                        <h3 class="fs-5 fw-normal">
+                                            <a href="#" class="text-decoration-none open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="${product.id}">${product.name}</a>
+                                        </h3>
+                                        <div class="d-flex justify-content-center align-items-center gap-2">
+                                            ${product.discounted_price !== null ? // Check if discounted_price exists
+                                                `<del>$${product.original_price}</del>
+                                                <span class="text-dark fw-semibold">$${product.discounted_price}</span>` :
+                                                `<span class="text-dark fw-semibold">$${product.original_price}</span>`
+                                            }
+                                        </div>
+                                        <div class="button-area p-3">
+                                            <div class="justify-content-center d-flex mb-3">
+                                                <div class="input-group product-qty col-8 col-lg-6" style="width: 100px; display: flex; align-items: center; gap: 5px;">
+                                                    <span class="input-group-btn">
+                                                        <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="quantity-${product.id}">
+                                                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
+                                                        </button>
+                                                    </span>
+                                                    ${product.stock > 0 ? // Check if product is in stock
+                                                        `<input type="text" id="quantity-${product.id}" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="${product.stock}">` :
+                                                        `<input type="text" id="quantity-${product.id}" name="quantity" class="quantity form-control input-number text-center" value="0" min="0" max="${product.stock}" disabled>` // Disable if out of stock
+                                                    }
+                                                    <span class="input-group-btn">
+                                                        <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="quantity-${product.id}">
+                                                            <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
+                                                        </button>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                ${product.stock > 0 ?
+                                                    `<a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart" data-product-id="${product.id}">
+                                                        Add to Cart
+                                                    </a>` :
+                                                    `<button type="button" class="btn btn-secondary rounded-1 p-2 fs-7" disabled>Out of Stock</button>`
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        $productListContainer.append(productHtml);
+                        initProductQty(); // Reinitialize quantity controls for new products
+                    });
+                } else {
+                    $productListContainer.html('<div class="col-12 text-center py-5"><p>No products found.</p></div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error fetching products:", status, error, xhr.responseText);
+                $productListContainer.html('<div class="col-12 text-center py-5"><p>Error loading products. Please try again later.</p></div>');
+            }
+        });
+    };
+
     // Document ready block (all initializations should go here)
     $(document).ready(function() {
         initPreloader();
         initTextFx();
         initSwiper();
-        initProductQty();
         initJarallax();
         initChocolat();
         initProductQuickViewModal(); // Initialize the modal quick view
         initModalProductQty(); 
         initAddToCart(); 
         fetchAndRenderCartDetails();
+        fetchAndRenderProducts();
+        initCartItemControls(); 
     });
 
 })(jQuery);

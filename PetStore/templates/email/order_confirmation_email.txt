@@ -1,0 +1,32 @@
+Subject: Order Confirmation - Furry PetStore Order #{{ order.id }}
+
+Dear {{ order.first_name }} {{ order.last_name }},
+
+Thank you for your recent purchase from Furry PetStore!
+
+Your order #{{ order.id }} has been successfully placed.
+
+Order Summary:
+{% for item in order.items.all %}
+- {{ item.quantity }} x {{ item.product.name }} @ ${{ item.price|floatformat:2 }} each = ${{ item.total_price|floatformat:2 }}
+{% endfor %}
+
+Total Amount: ${{ order.total_amount|floatformat:2 }}
+
+Shipping Information:
+Name: {{ order.first_name }} {{ order.last_name }}
+Address: {{ order.address_line_1 }}
+{% if order.address_line_2 %}{{ order.address_line_2 }}{% endif %}
+City: {{ order.city }}
+State/Province: {{ order.state }}
+Zip Code: {{ order.zip_code }}
+Country: {{ order.country }}
+Email: {{ order.email }}
+{% if order.phone %}Phone: {{ order.phone }}{% endif %}
+
+We will send you another email when your order ships.
+
+Thank you for shopping with us!
+
+Sincerely,
+The Furry PetStore Team

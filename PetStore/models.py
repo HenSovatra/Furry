@@ -1,6 +1,9 @@
 from django.db import models
 from django.utils.text import slugify 
 from django.contrib.auth import get_user_model
+
+from django.conf import settings
+import decimal
 class MenuItem(models.Model):
     title = models.CharField(max_length=100, help_text="The text displayed in the navigation bar.")
     url = models.CharField(
@@ -144,42 +147,153 @@ class Product(models.Model):
 
 
 class Cart(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, null=True, blank=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     session_key = models.CharField(max_length=40, null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    total_items = models.PositiveIntegerField(default=0)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=decimal.Decimal('0.00')) # Use Decimal for default
+
+    class Meta:
+        verbose_name = "Shopping Cart"
+        verbose_name_plural = "Shopping Carts"
 
     def __str__(self):
-        if self.user:
-            return f"Cart for {self.user.username}"
-        return f"Cart {self.session_key or self.pk}"
+        return f"Cart {self.pk} (User: {self.user.username if self.user else self.session_key[:5] if self.session_key else 'Guest'})"
 
-    # Property to calculate total price of all items in the cart
-    @property
-    def total_price(self):
-        return sum(item.total_price for item in self.items.all())
+    # THIS IS THE METHOD THAT NEEDS TO BE PRESENT AND CORRECTLY SPELLED
+    def update_totals(self):
+        """
+        Recalculates and updates the total items count (sum of quantities)
+        and the total price of all items in the cart.
+        """
+        # Calculate total_items
+        self.total_items = sum(item.quantity for item in self.items.all())
 
-    # Property to get total count of items in the cart
-    @property
-    def total_items(self):
-        return sum(item.quantity for item in self.items.all())
+        # Calculate total_price
+        # Ensure that item.total_price is calculated correctly and is a Decimal
+        self.total_price = sum(item.total_price for item in self.items.all())
+
+        # Save the Cart instance to persist the updated totals
+        self.save()
 
 
 class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    cart = models.ForeignKey('Cart', on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
-    added_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('cart', 'product') # Ensures one product per cart entry
+        # This ensures that each product can only appear once in a given cart
+        # If you try to add the same product again, it will retrieve the existing CartItem
+        # instead of creating a new one.
+        unique_together = ('cart', 'product')
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name} in cart {self.cart.pk}"
+        return f"{self.quantity} x {self.product.name} in Cart {self.cart.pk}"
 
-    # Property to calculate total price for this specific cart item
     @property
     def total_price(self):
-        # Use the product's current_price property
-        return self.quantity * self.product.original_price
+        # Always use the product's current_price for cart items
+        # because the price hasn't been "locked in" like in an OrderItem yet.
+        # Ensure current_price is a Decimal
+        price = self.product.original_price if self.product.discounted_price is None else self.product.discounted_price
+        if price is not None and self.quantity is not None:
+            return self.quantity * price
+        return decimal.Decimal('0.00') # Return Decimal 0 if values are missing
 
+    def save(self, *args, **kwargs):
+        # Update current_price on product for robustness, though current_price is a property
+        # You don't need to save product here unless you're modifying product itself.
+
+        super().save(*args, **kwargs) # Call the "real" save() method.
+        # After saving this CartItem, update the parent Cart's totals.
+        self.cart.update_totals()
+
+    def delete(self, *args, **kwargs):
+        cart_to_update = self.cart # Get reference to cart before item is deleted
+        super().delete(*args, **kwargs)
+        # Update the parent Cart's totals after deleting this item.
+        cart_to_update.update_totals()
+
+class Order(models.Model):
+    # Link to a User (if authenticated) or allow null for guest checkout
+    user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Session key for guest users before or if not logged in
+    session_key = models.CharField(max_length=40, null=True, blank=True) 
+
+    # Shipping Address Details
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True, null=True) # Optional phone
+    address_line_1 = models.CharField(max_length=255)
+    address_line_2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100, blank=True, null=True) # Optional state/province
+    zip_code = models.CharField(max_length=20)
+    country = models.CharField(max_length=100)
+
+    # Order Status (you can customize these choices)
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Processing', 'Processing'),
+        ('Shipped', 'Shipped'),
+        ('Delivered', 'Delivered'),
+        ('Cancelled', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
+
+    # Financial Details
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Payment status (can expand with more options later)
+    PAYMENT_STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Paid', 'Paid'),
+        ('Failed', 'Failed'),
+    ]
+    payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default='Pending')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Order"
+        verbose_name_plural = "Orders"
+
+    def __str__(self):
+        return f"Order {self.id} by {self.first_name} {self.last_name}"
+
+    # Helper property to get the full shipping address
+    @property
+    def full_address(self):
+        address = f"{self.address_line_1}"
+        if self.address_line_2:
+            address += f", {self.address_line_2}"
+        address += f", {self.city}, {self.state or ''} {self.zip_code}, {self.country}"
+        return address.strip(', ')
+
+
+# Order Item Model
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    price = models.DecimalField(max_digits=10, decimal_places=2) # Price at the time of order
+
+    class Meta:
+        verbose_name = "Order Item"
+        verbose_name_plural = "Order Items"
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} in Order {self.order.id}"
+
+    # Property to calculate total price for this specific order item
+    @property
+    def total_price(self):
+        return self.quantity * self.price

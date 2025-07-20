@@ -24,7 +24,7 @@
                 <span class="fw-bold fs-5">Total: <span id="cart-dialog-total-price">$0.00</span></span>
                 <div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continue Shopping</button>
-                    <a href="" class="btn btn-primary" id="cart-dialog-checkout-btn">Proceed to Checkout</a>
+                    <a href="{% url 'PetStore:checkout' %}" class="btn btn-primary" id="cart-dialog-checkout-btn">Proceed to Checkout</a>
                     {# IMPORTANT: Replace 'your_app_name:checkout' with your actual checkout URL name #}
                 </div>
             </div>
@@ -183,67 +183,8 @@
           </div>
             <div class="row">
               <div class="col-md-12">
-                  <div class="product-grid row row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-lg-3 row-cols-xl-4">
-                      {% for product in products %}
-                      <div class="col">
-                          <div class="product-item mb-4">
-                              <figure>
-                                  <a href="#" class="open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="{{ product.pk }}" title="{{ product.name }}">
-                                      <img src="{{ product.image.url }}" alt="{{ product.name }}" class="tab-image img-fluid rounded-3">
-                                  </a>
-                              </figure>
-                              <div class="d-flex flex-column text-center">
-                                  <h3 class="fs-5 fw-normal">
-                                      <a href="#" class="text-decoration-none open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="{{ product.pk }}">{{ product.name }}</a>
-                                  </h3>
-                                  <div class="d-flex justify-content-center align-items-center gap-2">
-                                      {% if product.discounted_price %}
-                                      <del>${{ product.original_price|floatformat:2 }}</del>
-                                      <span class="text-dark fw-semibold">${{ product.discounted_price|floatformat:2 }}</span>
-                                      {% else %}
-                                      <span class="text-dark fw-semibold">${{ product.original_price|floatformat:2 }}</span>
-                                      {% endif %}
-                                  </div>
-                                  <div class="button-area p-3">
-                                      <div class="justify-content-center d-flex mb-3">
-                                          {# Added Bootstrap col classes for width control instead of inline style #}
-                                          {# Bootstrap's input-group with d-flex naturally handles buttons aside #}
-                                          <div class="input-group product-qty col-8 col-lg-6" style="width: 100px; display: flex; align-items: center; gap: 5px;">
-                                              <span class="input-group-btn">
-                                                  <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="quantity-{{ product.id }}">
-                                                      <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
-                                                  </button>
-                                              </span>
-                                               {% if product.stock > 0 %}
-                                               <input type="text" id="quantity-{{ product.id }}" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="{{ product.stock }}">
-                                              {% else %}
-                                               <input type="text" id="quantity-{{ product.id }}" name="quantity" class="quantity form-control input-number text-center" value="0" min="0" max="{{ product.stock }}">
-                                              {% endif %}
-                                              <span class="input-group-btn">
-                                                  <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="quantity-{{ product.id }}">
-                                                      <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
-                                                  </button>
-                                              </span>
-                                          </div>
-                                      </div>
-                                      <div>
-                                          {% if product.stock > 0 %}
-                                          <a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart" data-product-id="{{ product.id }}">
-                                              Add to Cart
-                                          </a>
-                                          {% else %}
-                                          <button type="button" class="btn btn-secondary rounded-1 p-2 fs-7" disabled>Out of Stock</button>
-                                          {% endif %}
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                      {% empty %}
-                      <div class="col-12 text-center py-5">
-                          <p>No products found.</p>
-                      </div>
-                      {% endfor %}
+                  <div class="product-grid row row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-lg-3 row-cols-xl-4" id="product-list-container">
+                      
                   </div>
               </div>
           </div>

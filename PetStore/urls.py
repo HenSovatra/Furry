@@ -12,4 +12,7 @@ urlpatterns = [
     path('product-quick-view/<int:pk>/', views.product_quick_view, name='product_quick_view'), 
     path('add-to-cart/', views.add_to_cart, name='add_to_cart'),
     path('get-cart-details/', views.get_cart_details, name='get_cart_details'),
+    path('checkout/', views.checkout_view, name='checkout'),
+    path('order-confirmation/', views.order_confirmation_view, name='order_confirmation'), # <--- ADD THIS
+    path('order-confirmation/<int:order_id>/', views.order_confirmation_view, name='order_confirmation_with_id'), # Optional: for specific order
 ]

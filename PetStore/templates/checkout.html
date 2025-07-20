@@ -1,0 +1,370 @@
+{% load static %}
+
+{% include "css.html" %}
+<div class="container my-5">
+    <h2 class="mb-4 text-center">Checkout</h2>
+
+    <div class="row">
+        {# Cart Summary Column - Placeholder for JS rendering #}
+        <div class="col-lg-6 order-lg-2 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Order Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div id="checkout-cart-summary">
+                        <p class="text-center text-muted">Loading cart summary...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Shipping and Payment Form Column (remains the same) #}
+        <div class="col-lg-6 order-lg-1">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Shipping Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="checkout-form" novalidate>
+                        {% csrf_token %}
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" required
+                                       value="{% if user.is_authenticated %}{{ user.first_name }}{% endif %}">
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" required
+                                       value="{% if user.is_authenticated %}{{ user.last_name }}{% endif %}">
+                            </div>
+                            <div class="col-12">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required
+                                       value="{% if user.is_authenticated %}{{ user.email }}{% endif %}">
+                            </div>
+                            <div class="col-12">
+                                <label for="phone" class="form-label">Phone (Optional)</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" placeholder="+1234567890">
+                            </div>
+                            <div class="col-12">
+                                <label for="address_line_1" class="form-label">Address Line 1</label>
+                                <input type="text" class="form-control" id="address_line_1" name="address_line_1" placeholder="1234 Main St" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="address_line_2" class="form-label">Address Line 2 <span class="text-muted">(Optional)</span></label>
+                                <input type="text" class="form-control" id="address_line_2" name="address_line_2" placeholder="Apartment, suite, unit, etc.">
+                            </div>
+                            <div class="col-md-5">
+                                <label for="country" class="form-label">Country</label>
+                                <select class="form-select" id="country" name="country" required>
+                                    <option value="">Choose...</option>
+                                    <option value="USA">United States</option>
+                                    <option value="CAN">Canada</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="AUS">Australia</option>
+                                    <option value="OTH">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="state" class="form-label">State / Province</label>
+                                <input type="text" class="form-control" id="state" name="state">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="zip_code" class="form-label">Zip Code</label>
+                                <input type="text" class="form-control" id="zip_code" name="zip_code" required>
+                            </div>
+                             <div class="col-md-6">
+                                <label for="city" class="form-label">City</label>
+                                <input type="text" class="form-control" id="city" name="city" required>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="same-address" checked>
+                            <label class="form-check-label" for="same-address">Shipping address is the same as my billing address</label>
+                        </div>
+
+                        <div id="billing-address-section">
+                            <h5 class="mb-3">Billing Information</h5>
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6">
+                                    <label for="billing_first_name" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="billing_first_name" name="billing_first_name">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label for="billing_last_name" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="billing_last_name" name="billing_last_name">
+                                </div>
+                                <div class="col-12">
+                                    <label for="billing_email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="billing_email" name="billing_email">
+                                </div>
+                                <div class="col-12">
+                                    <label for="billing_phone" class="form-label">Phone (Optional)</label>
+                                    <input type="tel" class="form-control" id="billing_phone" name="billing_phone">
+                                </div>
+                                <div class="col-12">
+                                    <label for="billing_address_line_1" class="form-label">Address Line 1</label>
+                                    <input type="text" class="form-control" id="billing_address_line_1" name="billing_address_line_1">
+                                </div>
+                                <div class="col-12">
+                                    <label for="billing_address_line_2" class="form-label">Address Line 2 <span class="text-muted">(Optional)</span></label>
+                                    <input type="text" class="form-control" id="billing_address_line_2" name="billing_address_line_2">
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="billing_country" class="form-label">Country</label>
+                                    <select class="form-select" id="billing_country" name="billing_country">
+                                        <option value="">Choose...</option>
+                                        <option value="USA">United States</option>
+                                        <option value="CAN">Canada</option>
+                                        <option value="UK">United Kingdom</option>
+                                        <option value="AUS">Australia</option>
+                                        <option value="OTH">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="billing_state" class="form-label">State / Province</label>
+                                    <input type="text" class="form-control" id="billing_state" name="billing_state">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="billing_zip_code" class="form-label">Zip Code</label>
+                                    <input type="text" class="form-control" id="billing_zip_code" name="billing_zip_code">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="billing_city" class="form-label">City</label>
+                                    <input type="text" class="form-control" id="billing_city" name="billing_city">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h5 class="mb-3">Payment Method</h5>
+                        <div class="my-3">
+                            <div class="form-check">
+                                <input id="credit" name="paymentMethod" type="radio" class="form-check-input" value="credit_card" checked required>
+                                <label class="form-check-label" for="credit">Credit card</label>
+                            </div>
+                            <div class="form-check">
+                                <input id="paypal" name="paymentMethod" type="radio" class="form-check-input" value="paypal" required>
+                                <label class="form-check-label" for="paypal">PayPal</label>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <button class="w-100 btn btn-primary btn-lg" type="submit" id="place-order-btn">Place Order</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% include "scripts.html" %}
+
+<script>
+   $(document).ready(function() {
+        const $sameAddressCheckbox = $('#same-address');
+        const $billingAddressSection = $('#billing-address-section');
+        const $billingFields = $billingAddressSection.find('input, select');
+        const $checkoutForm = $('#checkout-form');
+        const $placeOrderBtn = $('#place-order-btn');
+        const $checkoutCartSummary = $('#checkout-cart-summary'); // New element for cart summary
+
+        // Function to get CSRF token from cookie (re-used from main.js or defined here)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Function to toggle required attribute for billing fields
+        function toggleRequiredFields(fields, isRequired) {
+            fields.each(function() {
+                if ($(this).attr('name') !== 'billing_phone') { // Phone is optional
+                    $(this).prop('required', isRequired);
+                }
+            });
+        }
+
+        // Initial state: billing address hidden by default since checkbox is checked
+        $billingAddressSection.hide();
+        toggleRequiredFields($billingFields, false);
+
+        $sameAddressCheckbox.on('change', function() {
+            if ($(this).is(':checked')) {
+                $billingAddressSection.slideUp();
+                toggleRequiredFields($billingFields, false);
+            } else {
+                $billingAddressSection.slideDown();
+                toggleRequiredFields($billingFields, true);
+                copyShippingToBilling();
+            }
+        });
+
+        // Function to copy shipping address to billing address
+        function copyShippingToBilling() {
+            $('#billing_first_name').val($('#first_name').val());
+            $('#billing_last_name').val($('#last_name').val());
+            $('#billing_email').val($('#email').val());
+            $('#billing_phone').val($('#phone').val());
+            $('#billing_address_line_1').val($('#address_line_1').val());
+            $('#billing_address_line_2').val($('#address_line_2').val());
+            $('#billing_country').val($('#country').val());
+            $('#billing_state').val($('#state').val());
+            $('#billing_zip_code').val($('#zip_code').val());
+            $('#billing_city').val($('#city').val());
+        }
+
+        // --- NEW: Fetch and render cart summary for checkout page ---
+        var fetchAndRenderCheckoutCartSummary = function() {
+            $checkoutCartSummary.html('<p class="text-center text-muted">Loading cart summary...</p>');
+
+            $.ajax({
+                url: '{% url "APIs:api-cart-details" %}', // Your cart details API
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    let summaryHtml = '';
+                    if (response.cart_items && response.cart_items.length > 0) {
+                        summaryHtml += '<ul class="list-group list-group-flush mb-3">';
+                        response.cart_items.forEach(item => {
+                            const unitPrice = item.product.current_price !== undefined && item.product.current_price !== null
+                                              ? item.product.current_price.toFixed(2) : '0.00';
+                            const itemTotalPrice = item.total_price !== undefined && item.total_price !== null
+                                                   ? item.total_price.toFixed(2) : '0.00';
+
+                            summaryHtml += `
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="my-0">${item.product.name}</h6>
+                                        <small class="text-muted">Quantity: ${item.quantity} x $${unitPrice}</small>
+                                    </div>
+                                    <span class="text-muted">$${itemTotalPrice}</span>
+                                </li>
+                            `;
+                        });
+                        summaryHtml += '</ul>';
+                        summaryHtml += '<hr>';
+                        summaryHtml += `
+                            <div class="d-flex justify-content-between align-items-center fw-bold fs-5">
+                                <span>Total (USD)</span>
+                                <strong>$${response.total.toFixed(2)}</strong>
+                            </div>
+                        `;
+                        $placeOrderBtn.prop('disabled', false); // Enable place order button
+                    } else {
+                        summaryHtml = `
+                            <p class="text-center text-muted">Your cart is empty. Please add items to proceed.</p>
+                            <div class="text-center mt-3">
+                                <a href="{% url 'PetStore:home' %}" class="btn btn-info">Continue Shopping</a>
+                            </div>
+                        `;
+                        $placeOrderBtn.prop('disabled', true); // Disable place order button
+                    }
+                    $checkoutCartSummary.html(summaryHtml);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching checkout cart summary:', status, error, xhr.responseText);
+                    $checkoutCartSummary.html('<p class="text-danger text-center">Failed to load cart summary. Please try again.</p>');
+                    $placeOrderBtn.prop('disabled', true);
+                }
+            });
+        };
+
+        // Handle form submission via AJAX
+        $checkoutForm.on('submit', function(event) {
+            event.preventDefault();
+
+            if (!this.checkValidity()) {
+                event.stopPropagation();
+                $(this).addClass('was-validated');
+                return;
+            }
+
+            $placeOrderBtn.prop('disabled', true).text('Processing...');
+
+            let formData = {};
+            $(this).find('input, select, textarea').each(function() {
+                let $input = $(this);
+                let name = $input.attr('name');
+                let value = $input.val();
+
+                if ($input.attr('type') === 'radio') {
+                    if ($input.is(':checked')) {
+                        formData[name] = value;
+                    }
+                } else if (name) {
+                    formData[name] = value;
+                }
+            });
+
+            if ($sameAddressCheckbox.is(':checked')) {
+                formData['billing_first_name'] = formData['first_name'];
+                formData['billing_last_name'] = formData['last_name'];
+                formData['billing_email'] = formData['email'];
+                formData['billing_phone'] = formData['phone'];
+                formData['billing_address_line_1'] = formData['address_line_1'];
+                formData['billing_address_line_2'] = formData['address_line_2'];
+                formData['billing_country'] = formData['country'];
+                formData['billing_state'] = formData['state'];
+                formData['billing_zip_code'] = formData['zip_code'];
+                formData['billing_city'] = formData['city'];
+            }
+
+            $.ajax({
+                url: '{% url "APIs:api-place-order" %}', // Point to the new API endpoint
+                method: 'POST',
+                data: JSON.stringify(formData),
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        window.location.href = response.redirect_url;
+                    } else {
+                        let errorMessages = '';
+                        if (response.error) {
+                            errorMessages = response.error;
+                        } else if (response.errors) {
+                            for (const field in response.errors) {
+                                errorMessages += `${field}: ${response.errors[field].join(', ')}\n`;
+                            }
+                        }
+                        alert('Order failed:\n' + errorMessages);
+                        $checkoutForm.removeClass('was-validated');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Checkout API error:', status, error, xhr.responseText);
+                    alert('An error occurred during checkout. Please try again.');
+                    $checkoutForm.removeClass('was-validated');
+                },
+                complete: function() {
+                    $placeOrderBtn.prop('disabled', false).text('Place Order');
+                }
+            });
+        });
+
+        // Initial call to fetch and render cart summary when checkout page loads
+        fetchAndRenderCheckoutCartSummary();
+    });
+</script>

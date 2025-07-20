@@ -1,0 +1,49 @@
+{% load static %}
+{% include "css.html" %}
+<div class="container my-5 text-center">
+    <div class="card shadow-sm mx-auto" style="max-width: 700px;">
+        <div class="card-header bg-success text-white">
+            <h3 class="mb-0"><i class="bi bi-check-circle-fill me-2"></i> Order Placed Successfully!</h3>
+        </div>
+        <div class="card-body">
+            {% if order %}
+            <p class="lead">Thank you for your purchase, {{ order.first_name }}!</p>
+            <p>Your order <strong>#{{ order.id }}</strong> has been placed.</p>
+
+            <h5 class="mt-4 mb-3">Order Details:</h5>
+            <ul class="list-group list-group-flush mb-4">
+                {% for item in order.items.all %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>{{ item.quantity }} x {{ item.product.name }}</span>
+                    <span>${{ item.total_price|floatformat:2 }}</span>
+                </li>
+                {% endfor %}
+                <li class="list-group-item d-flex justify-content-between align-items-center fw-bold bg-light">
+                    <span>Total Amount:</span>
+                    <span>${{ order.total_amount|floatformat:2 }}</span>
+                </li>
+            </ul>
+
+            <h5 class="mb-3">Shipping Information:</h5>
+            <p class="mb-1">{{ order.first_name }} {{ order.last_name }}</p>
+            <p class="mb-1">{{ order.address_line_1 }}{% if order.address_line_2 %}, {{ order.address_line_2 }}{% endif %}</p>
+            <p class="mb-1">{{ order.city }}, {{ order.state }} {{ order.zip_code }}</p>
+            <p class="mb-1">{{ order.country }}</p>
+            <p class="mb-1">Email: {{ order.email }}</p>
+            {% if order.phone %}<p class="mb-1">Phone: {{ order.phone }}</p>{% endif %}
+
+            {% else %}
+            <p class="text-muted">No order details found. If you just placed an order, please check your email for confirmation.</p>
+            {% endif %}
+
+            <div class="mt-5">
+                <a href="{% url 'PetStore:home' %}" class="btn btn-primary btn-lg me-3">Continue Shopping</a>
+                {# Optionally, a link to view order history if authenticated #}
+                {% if user.is_authenticated %}
+                <a href="" class="btn btn-outline-secondary btn-lg">View Order History</a>
+                {# Replace 'your_app_name:order_history' with your actual URL #}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

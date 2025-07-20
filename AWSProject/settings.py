@@ -12,9 +12,18 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'genyurosama@gmail.com'
+
+EMAIL_HOST_PASSWORD = 'dzpd djtg enla ocnu' # Replace with actual App Password for testing
+DEFAULT_FROM_EMAIL = 'genyurosama@gmail.com' # The email address that appears as the sender
+SERVER_EMAIL = 'genyurosama@gmail.com'
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -38,7 +47,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'PetStore',
-    'Admin',
+    'Admin',    
+    'rest_framework',
+    'APIs',
 ]
 
 MIDDLEWARE = [

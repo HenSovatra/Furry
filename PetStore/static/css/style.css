@@ -822,3 +822,10 @@ a.btn-link.text-light:after {
   background: none;
   color: var(--bs-dark);
 }
+.tab-image {
+    width: 250px; /* Or whatever fixed width you prefer */
+    height: 250px; /* Or whatever fixed height you prefer */
+    object-fit: cover; /* This is the key: it covers the area, cropping if necessary */
+    display: block; /* Ensures width/height are applied correctly */
+    border-radius: 0.3rem; /* Matches your rounded-3 class for consistency */
+}
