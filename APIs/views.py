@@ -56,7 +56,6 @@ def cart_details(request):
 
     items = cart.items.all()
     serializer = CartItemSerializer(items, many=True)
-    print(serializer.data)
     return Response({
         'cart_items': serializer.data,
         'total': cart.total_price,
@@ -69,29 +68,26 @@ def order_detail(request, order_id):
     serializer = OrderSerializer(order)
     return Response(serializer.data)
 
-
 @api_view(['POST'])
-@csrf_exempt # REMOVE IN PRODUCTION. Use proper CSRF protection.
+@csrf_exempt
 def update_cart_item_quantity_api(request):
     try:
-        data = json.loads(request.body) # Use json.loads for request.body
-        product_id = data.get('product_id')
-        new_quantity = data.get('quantity') # This is the absolute new quantity, not a change
-
+        # CORRECT: Use request.data for DRF views
+        product_id = request.data.get('product_id')
+        new_quantity = request.data.get('quantity')
+        
         if not product_id or not isinstance(new_quantity, int) or new_quantity < 0:
             return Response({'success': False, 'error': 'Invalid product ID or quantity.'}, status=status.HTTP_400_BAD_REQUEST)
-
+        
         user = request.user if request.user.is_authenticated else None
         session_key = request.session.session_key
-        # Get cart based on user or session
-        if user:
-            cart = Cart.objects.filter(user=user).first()
-        else:
-            if not session_key: # Ensure session exists for guest users
-                request.session.create()
-                session_key = request.session.session_key
-            cart = Cart.objects.filter(session_key=session_key).first()
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
 
+        cart = Cart.objects.filter(user=user).first() if user else Cart.objects.filter(session_key=session_key).first()
+        print(f"Product ID: {product_id}")
+        print(f"New Quantity: {new_quantity}")
         if not cart:
             return Response({'success': False, 'error': 'Cart not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -100,78 +96,65 @@ def update_cart_item_quantity_api(request):
         except CartItem.DoesNotExist:
             return Response({'success': False, 'error': 'Item not found in cart.'}, status=status.HTTP_404_NOT_FOUND)
 
-        product = cart_item.product # Get the associated product to check stock
+        product = cart_item.product
 
         if new_quantity == 0:
-            # If new quantity is 0, remove the item
-            cart_item.delete() # This will trigger cart.update_totals()
+            cart_item.delete()
             message = 'Item removed from cart.'
         else:
-            # Check stock before updating quantity
             if product.stock < new_quantity:
-                return Response({'error': f'Only {product.stock} left in stock. Cannot update to {new_quantity}.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'success': False, 'error': f'Only {product.stock} left in stock. Cannot update to {new_quantity}.'}, status=status.HTTP_400_BAD_REQUEST)
 
             cart_item.quantity = new_quantity
-            cart_item.save() # This will trigger cart.update_totals()
+            cart_item.save()
             message = 'Cart quantity updated.'
 
-        # Explicitly call update_totals just in case, or to ensure 'cart' object in memory is updated
         cart.update_totals()
-        request.session['cart_total_items'] = cart.total_items # Update session cart count
+        request.session['cart_total_items'] = cart.total_items
 
         return Response({'success': True, 'message': message, 'cart_total_items': cart.total_items}, status=status.HTTP_200_OK)
 
-    except json.JSONDecodeError:
-        return Response({'success': False, 'error': 'Invalid JSON request.'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         print(f"Error updating cart quantity: {e}")
         return Response({'success': False, 'error': f'An unexpected error occurred: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@csrf_exempt # REMOVE IN PRODUCTION. Use proper CSRF protection.
+@csrf_exempt
 def remove_from_cart_api(request):
     try:
-        data = json.loads(request.body) # Use json.loads for request.body
-        product_id = data.get('product_id')
+        # CORRECT: Use request.data for DRF views
+        product_id = request.data.get('product_id')
 
         if not product_id:
             return Response({'success': False, 'error': 'Product ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = request.user if request.user.is_authenticated else None
         session_key = request.session.session_key
-        # Get cart based on user or session
-        if user:
-            cart = Cart.objects.filter(user=user).first()
-        else:
-            if not session_key: # Ensure session exists for guest users
-                request.session.create()
-                session_key = request.session.session_key
-            cart = Cart.objects.filter(session_key=session_key).first()
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+
+        cart = Cart.objects.filter(user=user).first() if user else Cart.objects.filter(session_key=session_key).first()
 
         if not cart:
             return Response({'success': False, 'error': 'Cart not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             cart_item = CartItem.objects.get(cart=cart, product__id=product_id)
-            cart_item.delete() # This will trigger cart.update_totals()
+            cart_item.delete()
             message = 'Item successfully removed from cart.'
         except CartItem.DoesNotExist:
             message = 'Item was not in cart (already removed or never existed).'
-            # It's often better to return 200 OK even if not found, if the desired state is "not in cart"
             return Response({'success': True, 'message': message, 'cart_total_items': cart.total_items}, status=status.HTTP_200_OK)
 
-        # Explicitly call update_totals just in case, or to ensure 'cart' object in memory is updated
         cart.update_totals()
-        request.session['cart_total_items'] = cart.total_items # Update session cart count
+        request.session['cart_total_items'] = cart.total_items
 
         return Response({'success': True, 'message': message, 'cart_total_items': cart.total_items}, status=status.HTTP_200_OK)
 
-    except json.JSONDecodeError:
-        return Response({'success': False, 'error': 'Invalid JSON request.'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         print(f"Error removing from cart: {e}")
         return Response({'success': False, 'error': f'An unexpected error occurred: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 @csrf_exempt # IMPORTANT: REMOVE THIS IN PRODUCTION AND USE PROPER CSRF PROTECTION
