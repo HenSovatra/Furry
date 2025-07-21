@@ -1,0 +1,114 @@
+/* Existing styles from model.html extrastyle block */
+.hide-show-dropdown {
+    max-height: 350px;
+    overflow-y: scroll;
+}
+.page-size .export-csv-img {
+    width: 35px;
+    cursor: pointer;
+}
+.export-img {
+    width: 30px;
+}
+.modal-header {
+    display: block !important;
+}
+.height{
+    height: 40px !important; /* This seems to be targeting form inputs or similar, be specific */
+}
+/* Styles for action buttons */
+.table-row {
+    position: relative; /* Keep this to position .action-td relative to the row */
+    transition: background-color 0.3s ease;
+}
+
+.action-td {
+    /* Always display flex for the buttons */
+    position: static; /* Ensure it's static to behave normally within its parent td */
+    text-align: right; /* Align content to the right within the table cell */
+    display: flex; /* Use flexbox to arrange buttons */
+    justify-content: flex-end; /* Align items to the right of the flex container */
+    align-items: center; /* Vertically center buttons */
+    gap: 3px; /* Space between buttons */
+    padding-right: 5px; /* Reduced padding for "at the edge" look, adjust as needed (0px for flush) */
+    /* Removed any display: none or opacity: 0 as they are no longer needed */
+}
+/* IMPORTANT: Removed the .table-row:hover .action-td rule entirely */
+
+
+/* Custom styles for search bar and add button placement */
+/* Existing styles */
+
+.search-bar-container .row {
+    margin-left: 16px; /* Adjust as needed */
+    margin-right: 0;
+}
+.search-bar-container .col-md-6 {
+    padding-left: 15px; /* Adjust as needed */
+    padding-right: 0;
+}
+/* Style for the 'Add New Item' button */
+.btn-add-new {
+    margin-left: auto; /* Push button to the right */
+}
+/* Styles for the new internal navigation tabs */
+.nav-pills .nav-item .nav-link {
+    color: #6c757d; /* Default text color */
+    background-color: transparent;
+    border: 1px solid transparent;
+}
+.nav-pills .nav-item .nav-link.active {
+    color: #fff; /* Active text color */
+    background-color: #cb0c9f; /* Primary color for active tab */
+    border-color: #cb0c9f;
+}
+
+/* Styles for modal form elements */
+/* Added general margin for input groups in modals for better spacing */
+.modal-body .input-group-outline {
+    margin-bottom: 25px !important; /* Increase bottom margin for better spacing between inputs */
+    margin-top: 15px !important;    /* Increase top margin */
+}
+
+/* Force labels to always be lifted for input-group-outline within modals */
+.modal-body .input-group-outline .form-label {
+    transform: translateY(-1rem) scale(0.8); /* Forces the label to move up and shrink */
+    background-color: white; /* Add background to cover text behind it */
+    padding: 0 4px; /* Small padding around the label text */
+    z-index: 2; /* Ensure label is above input field */
+    position: absolute; /* Re-add absolute positioning to align freely */
+    left: 0.5rem; /* Slightly adjusted left position for fine-tuning */
+    top: 0.5rem; /* Slightly adjusted top position for fine-tuning */
+}
+
+/* This is if you added focused/is-filled to the input-group-outline div for pre-filled data */
+.modal-body .input-group-outline.focused .form-label,
+.modal-body .input-group-outline.is-filled .form-label {
+    /* Ensure these are not overridden if you want them to behave differently when focused/filled */
+    transform: translateY(-1rem) scale(0.8); /* Reiterate if needed */
+}
+
+/* Hide placeholder when label is forced up */
+.modal-body .input-group-outline .form-control::placeholder {
+    opacity: 0;
+}
+
+/* Specific styling for search bar elements - Ensure these are also well-defined */
+.search-bar-container .input-group-outline .form-label {
+    transform: translateY(-1rem) scale(0.8); /* Forces label up */
+    background-color: white;
+    padding: 0 4px;
+    z-index: 2;
+    position: absolute;
+    left: 0.5rem; /* Adjust as needed */
+    top: 0.5rem; /* Adjust as needed */
+}
+
+.search-bar-container .input-group-outline .form-control::placeholder {
+    opacity: 0;
+}
+
+.search-bar-container .input-group-outline {
+    margin-bottom: 0 !important; /* Adjust if extra margin is present and unwanted */
+    margin-top: 0 !important; /* Adjust if extra margin is present and unwanted */
+}

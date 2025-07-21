@@ -1,22 +1,86 @@
-{% load get_attribute %}
+{% load static get_attribute %}
 
-<div class="dt-responsive table-responsive">
-    <table class="table">
-        <thead>
-          <tr>
-            {% for field in db_field_names %}
-                <th id="th_{{ field }}_export" scope="col">{{ field }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
+<table class="table align-items-center mb-0">
+    <thead>
+        <tr>
+            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                AUTHOR
+            </th>
+            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                FUNCTION
+            </th>
+            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                STATUS
+            </th>
+            {# Add this line for Stock #}
+            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                STOCK
+            </th>
+            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                EMPLOYED
+            </th>
+            <th class="text-secondary opacity-7"></th> {# For actions #}
+        </tr>
+    </thead>
+    <tbody>
             {% for item in items %}
-            <tr>
-                {% for field_name in db_field_names %}
-                    <td class="td_{{ field_name }}">{{ item|getattribute:field_name }}</td>
-                {% endfor %}
+            <tr class="table-row">
+                {# Author Column (Product Name and Image) #}
+                <td>
+                    <div class="d-flex px-2 py-1 team-info">
+                        <div>
+                            {% if item.image %}
+                                <img src="{{ item.image.url }}" class="avatar avatar-sm me-3" alt="{{ item.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/default-product.png' %}" class="avatar avatar-sm me-3" alt="Default Product Image">
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-column justify-content-center">
+                            <h6 class="mb-0 text-sm">{{ item.name }}</h6>
+                            <p class="text-xs text-secondary mb-0">Original: {{ item.original_price }}</p>
+                            {% if item.discounted_price %}
+                            <p class="text-xs text-secondary mb-0">Discounted: {{ item.discounted_price }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+                {# Function Column (Product Description / Category) #}
+                <td>
+                    <p class="text-xs font-weight-bold mb-0">{{ item.category.name|default:"N/A" }}</p>
+                    <p class="text-xs text-secondary mb-0">{{ item.description|truncatechars:50 }}</p>
+                </td>
+                {# Status Column (Product is_active) #}
+                <td class="align-middle text-center text-sm">
+                    {% if item.is_active %}
+                        <span class="badge badge-sm bg-gradient-success">ONLINE</span>
+                    {% else %}
+                        <span class="badge badge-sm bg-gradient-secondary">OFFLINE</span>
+                    {% endif %}
+                </td>
+                {# Add this for Stock #}
+                <td class="align-middle text-center">
+                    <span class="text-secondary text-xs font-weight-bold">{{ item.stock }}</span>
+                </td>
+                {# Employed Column (Product created_at) #}
+                <td class="align-middle text-center">
+                    <span class="text-secondary text-xs font-weight-bold">{{ item.created_at|date:"d/m/y" }}</span>
+                </td>
+                {# Actions Column #}
+                <td class="align-middle action-td">
+                    {% if request.user.is_authenticated %}
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#editSales-{{item.id}}" class="text-secondary font-weight-bold text-xs" data-toggle="tooltip" data-original-title="Edit item">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#deleteSales-{{item.id}}" class="text-danger font-weight-bold text-xs" data-toggle="tooltip" data-original-title="Delete item">
+                            <i class="fas fa-trash-alt"></i> Delete
+                        </a>
+                    {% else %}
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#viewSales-{{item.id}}" class="text-primary font-weight-bold text-xs" data-toggle="tooltip" data-original-title="View item">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                    {% endif %}
+                </td>
             </tr>
-             {% endfor %}
+            {% endfor %}
         </tbody>
-    </table>
-</div>
+</table>

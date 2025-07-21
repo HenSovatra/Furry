@@ -42,19 +42,23 @@
           <span class="nav-link-text ms-1">Dashboard</span>
         </a>
       </li>
+
+      {# Data Tables - Now a single link to the main table page #}
       <li class="nav-item">
         <a
-          class="nav-link text-white {% if segment == 'dynamic_dt' %}active bg-gradient-primary{% endif %}"
-          href="{% url 'Admin:dynamic_dt_overview' %}"
+          class="nav-link text-white {% if segment == 'dynamic_dt' or request.GET.main_item %}active bg-gradient-primary{% endif %}"
+          href="{% url 'Admin:dynamic_dt_overview' %}" {# Link to the generic table page #}
         >
           <div
             class="text-white text-center me-2 d-flex align-items-center justify-content-center"
           >
             <i class="material-icons opacity-10">table_view</i>
           </div>
-          <span class="nav-link-text ms-1">Dynamic Tables</span>
+          <span class="nav-link-text ms-1">Data Tables</span>
         </a>
       </li>
+
+      {# Dynamic API (brought back) #}
       <li class="nav-item">
         <a
           class="nav-link text-white {% if segment == 'dynamic_api' %}active bg-gradient-primary{% endif %}"
@@ -68,6 +72,8 @@
           <span class="nav-link-text ms-1">Dynamic API</span>
         </a>
       </li>
+
+      {# Charts (brought back) #}
       <li class="nav-item">
         <a
           class="nav-link text-white {% if segment == 'charts' %}active bg-gradient-primary{% endif %}"
@@ -81,6 +87,8 @@
           <span class="nav-link-text ms-1">Charts</span>
         </a>
       </li>
+
+      {# Billing (existing) #}
       <li class="nav-item">
         <a
           class="nav-link text-white {% if segment == 'billing' %}active bg-gradient-primary{% endif %}"
@@ -94,6 +102,8 @@
           <span class="nav-link-text ms-1">Billing</span>
         </a>
       </li>
+
+      {# User account (brought back) #}
       <li class="nav-item">
         <a
           class="nav-link text-white {% if segment == 'user_management' %}active bg-gradient-primary{% endif %}"

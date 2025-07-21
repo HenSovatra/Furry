@@ -7,18 +7,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Your Dashboard{% endblock title %}</title>
 
+    
     <link rel="stylesheet" href="{% static 'assets/css/nucleo-icons.css' %}" />
     <link rel="stylesheet" href="{% static 'assets/css/nucleo-svg.css' %}" />
-    <link
-      rel="stylesheet"
-      href="{% static 'assets/css/argon-dashboard.css' %}?v=2.0.4"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    />
+    <link rel="stylesheet" href="{% static 'assets/css/argon-dashboard.css' %}?v=2.0.4" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 
+
+    {# IMPORTANT: Move this block after all core framework CSS links #}
     {% block extrastyle %}
+    <style>
+        @font-face {
+            font-family: 'NucleoText'; 
+            src: url('{% static "assets/fonts/nucleo.ttf" %}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        .breadcrumb-item.text-white,
+        .font-weight-bolder.text-white {
+            color: #1a202c !important; 
+            font-size: 1.15em !important; 
+            font-weight: bolder !important; 
+            font-family: 'NucleoText', sans-serif !important; 
+        }
+
+        .breadcrumb-item .opacity-5.text-white {
+            color: #1a202c !important;
+            opacity: 0.8 !important; 
+            font-size: 1.15em !important; 
+            font-weight: bolder !important; 
+            font-family: 'NucleoText', sans-serif !important; 
+        }
+    </style>
     {% endblock extrastyle %}
   </head>
   <body class="g-sidenav-show bg-gray-100">
@@ -138,6 +159,7 @@
 
     {% block extra_js %}
     {% endblock extra_js %}
+    
 
     <script>
       var win = navigator.platform.indexOf("Win") > -1;

@@ -1,13 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.apps import apps
-from django.db.models import ForeignKey, ManyToManyField, DateTimeField, IntegerField, EmailField, CharField, TextField, DecimalField, BooleanField
+from django.db.models import ForeignKey, ManyToManyField, DateTimeField, IntegerField, EmailField, CharField, TextField, DecimalField, BooleanField, ImageField
 from django.urls import reverse
 import json
 import csv
 from django.db import models
 from io import StringIO
-from .models import Product, Customer, Order, Billing
+from .models import Product, Customer, Order, Billing 
+from PetStore.models import Product as PetStoreProduct, Category 
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 
@@ -46,6 +47,8 @@ def get_model_fields(model):
                 text_fields.append(field_name)
             elif isinstance(field, BooleanField):
                 read_only_fields.append(field_name)
+            elif isinstance(field, ImageField):
+                read_only_fields.append(field_name) # Images are handled separately
 
     return {
         'db_field_names': fields,
@@ -70,14 +73,23 @@ def get_base_context(request, model_name=None):
 
     if model_name:
         context['link'] = model_name
+
+    model_map_for_context = {
+        'product': PetStoreProduct,
+        'customer': Customer,
+        'order': Order,
+        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
+        'billing': Billing,
+    }
+    context['model_map'] = model_map_for_context # Pass model_map to context for template use
     return context
 
-def dashboard_view(request):
+def dashboard(request):
     context = get_base_context(request)
     context['segment'] = 'dashboard'
     context['page_title'] = "Admin Dashboard"
 
-    total_products = Product.objects.count()
+    total_products = PetStoreProduct.objects.count()
     total_customers = Customer.objects.count()
     total_orders = Order.objects.count()
     total_revenue = Order.objects.filter(status='delivered').aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0.00
@@ -90,38 +102,66 @@ def dashboard_view(request):
     })
     return render(request, 'admin_app/index.html', context)
 
-def dyn_dt_index(request):
+def dynamic_api_overview(request):
+    context = get_base_context(request)
+    context['segment'] = 'dynamic_api'
+    context['page_title'] = "Dynamic API Endpoints Overview"
+
+    managed_models = {
+        'product': PetStoreProduct,
+        'customer': Customer,
+        'order': Order,
+        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
+        'billing': Billing,
+    }
+    
+    available_routes = [name for name, model_cls in managed_models.items() if model_cls is not None]
+    
+    context['routes'] = available_routes
+    return render(request, 'admin_app/dyn_dt/index.html', context)
+
+def dynamic_dt_overview(request):
     context = get_base_context(request)
     context['segment'] = 'dynamic_dt'
-    context['page_title'] = "Dynamic DataTables Overview"
 
-    managed_models = ['Product', 'Customer', 'Order', 'OrderItem', 'Billing']
-    routes = []
-    for model_name in managed_models:
-        try:
-            apps.get_model('Admin', model_name)
-            routes.append(model_name.lower())
-        except LookupError:
-            print(f"Model {model_name} not found in Admin app.")
-            pass
+    model_map = {
+        'product': PetStoreProduct,
+        'customer': Customer,
+        'order': Order,
+        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
+        'billing': Billing,
+    }
 
-    context['routes'] = routes
-    return render(request, 'admin_app/dyn_dt/index.html', context) # Adjusted this path
+    main_item = request.GET.get('main_item', 'product').lower()
+    category = request.GET.get('category', 'All')
 
-def model_dt_view(request, model_name):
-    context = get_base_context(request, model_name)
-    context['segment'] = 'dynamic_dt'
+    model = model_map.get(main_item)
 
-    try:
-        model = apps.get_model('Admin', model_name.capitalize())
-    except LookupError:
-        return HttpResponse("Model not found.", status=404)
+    if not model:
+        return HttpResponse("Model not found for selected item.", status=404)
+
+    page_title = f"{main_item.capitalize()} Management"
+    if main_item == 'product' and category != 'All':
+        page_title = f"{category} Products Management"
+    context['page_title'] = page_title
+    
+    context['set_main_item'] = main_item
+    context['set_category'] = category
 
     model_info = get_model_fields(model)
     context.update(model_info)
-    context['page_title'] = f'{model_name.capitalize()} Management'
 
     items = model.objects.all()
+
+    if main_item == 'product' and category != 'All':
+        try:
+            category_obj = Category.objects.get(name__iexact=category)
+            items = items.filter(category=category_obj)
+        except Category.DoesNotExist:
+            items = items.none()
+        except Exception as e:
+            print(f"Error filtering by category: {e}")
+
     search_query = request.GET.get('search', '')
     if search_query:
         q_objects = models.Q()
@@ -131,7 +171,7 @@ def model_dt_view(request, model_name):
         if q_objects:
             items = items.filter(q_objects)
 
-    filter_data = request.session.get(f'filters_{model_name}', [])
+    filter_data = request.session.get(f'filters_{main_item}', [])
     context['filter_instance'] = filter_data
     
     for f_data in filter_data:
@@ -141,10 +181,10 @@ def model_dt_view(request, model_name):
             try:
                 items = items.filter(**{f"{key}__icontains": value})
             except Exception as e:
-                print(f"Filter error: {e}")
+                print(f"Filter error for {key}: {e}")
 
     page = request.GET.get('page', 1)
-    page_items_count = request.session.get(f'page_items_{model_name}', 10)
+    page_items_count = request.session.get(f'page_items_{main_item}', 10)
     context['page_items'] = page_items_count
 
     paginator = Paginator(items, page_items_count)
@@ -156,30 +196,74 @@ def model_dt_view(request, model_name):
         items = paginator.page(paginator.num_pages)
     
     context['items'] = items
-    
     context['db_filters'] = model_info['db_field_names']
 
     return render(request, 'admin_app/dyn_dt/model.html', context)
 
-def create_view(request, link):
-    model_name = link.capitalize()
-    model = apps.get_model('Admin', model_name)
+def create_item(request, model_name):
+    referer_path = request.META.get('HTTP_REFERER', '/')
+    parsed_referer = reverse('Admin:dynamic_dt_overview')
+    main_item = model_name
+    category = 'All'
+
+    if 'main_item=' in referer_path:
+        from urllib.parse import urlparse, parse_qs
+        parsed_url = urlparse(referer_path)
+        query_params = parse_qs(parsed_url.query)
+        main_item = query_params.get('main_item', [model_name])[0]
+        category = query_params.get('category', ['All'])[0]
+        
+    model_map = {
+        'product': PetStoreProduct,
+        'customer': Customer,
+        'order': Order,
+        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
+        'billing': Billing,
+    }
+    model = model_map.get(model_name)
+
+    if not model:
+        return HttpResponse("Model not found for create operation.", status=404)
 
     if request.method == 'POST':
         data = request.POST.copy()
         
+        # Handle files (like images) and merge with POST data
+        for file_key, file_obj in request.FILES.items():
+            data[file_key] = file_obj
+
         for fk_key, fk_queryset in get_model_fields(model)['fk_fields'].items():
             if fk_key in data:
+                raw_fk_value_list = data.pop(fk_key)
+                if not raw_fk_value_list:
+                    data[fk_key] = None 
+                    continue
+
+                fk_value = raw_fk_value_list[0]
+
+                if fk_key == 'category' and fk_value.lower() == 'all':
+                    data[fk_key] = None
+                    continue
+
+                fk_model = fk_queryset.model 
+
                 try:
-                    fk_id = data.pop(fk_key)[0]
-                    fk_model = fk_queryset.model
+                    fk_id = int(fk_value)
                     data[fk_key] = fk_model.objects.get(id=fk_id)
-                except (IndexError, fk_model.DoesNotExist) as e:
-                    print(f"FK error for {fk_key}: {e}")
-                    return HttpResponse(f"Error creating item: Invalid FK for {fk_key}", status=400)
+                except (ValueError, fk_model.DoesNotExist):
+                    try:
+                        data[fk_key] = fk_model.objects.get(name__iexact=fk_value)
+                    except fk_model.DoesNotExist:
+                        print(f"FK error for {fk_key} (value: {fk_value}): Does not exist by ID or Name.")
+                        return HttpResponse(f"Error creating item: Invalid selection for {fk_key}.", status=400)
+                    except Exception as inner_e:
+                        print(f"Unexpected error when trying to get FK by name for {fk_key}: {inner_e}")
+                        return HttpResponse(f"Error creating item: Invalid selection for {fk_key}.", status=400)
 
         if 'csrfmiddlewaretoken' in data:
             del data['csrfmiddlewaretoken']
+        if 'id' in data:
+            del data['id']
 
         try:
             cleaned_data = {}
@@ -193,37 +277,86 @@ def create_view(request, link):
                     cleaned_data[field_name] = value
                 elif isinstance(field, BooleanField):
                     cleaned_data[field_name] = (value.lower() == 'on' or value.lower() == 'true')
+                elif isinstance(field, ImageField): # Handle ImageField explicitly
+                    if value: # Check if a file was provided
+                        cleaned_data[field_name] = value
+                    else:
+                        cleaned_data[field_name] = None # Or keep existing if updating, but this is create
                 else:
                     cleaned_data[field_name] = value
-
+            
             model.objects.create(**cleaned_data)
-            return redirect(reverse('Admin:model_dt', kwargs={'model_name': link}))
+            return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={main_item}&category={category}")
         except Exception as e:
             print(f"Error creating {model_name}: {e}")
             return HttpResponse(f"Error creating item: {e}", status=400)
     return HttpResponse("Invalid request method for create.", status=405)
 
+def update_item(request, model_name, item_id): # item_id is now passed from URL
+    referer_path = request.META.get('HTTP_REFERER', '/')
+    parsed_referer = reverse('Admin:dynamic_dt_overview')
+    main_item = model_name
+    category = 'All'
 
-def update_view(request, link, item_id):
-    model_name = link.capitalize()
-    model = apps.get_model('Admin', model_name)
-    item = get_object_or_404(model, id=item_id)
+    if 'main_item=' in referer_path:
+        from urllib.parse import urlparse, parse_qs
+        parsed_url = urlparse(referer_path)
+        query_params = parse_qs(parsed_url.query)
+        main_item = query_params.get('main_item', [model_name])[0]
+        category = query_params.get('category', ['All'])[0]
+
+    model_map = {
+        'product': PetStoreProduct,
+        'customer': Customer,
+        'order': Order,
+        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
+        'billing': Billing,
+    }
+    model = model_map.get(model_name)
+
+    if not model:
+        return HttpResponse("Model not found for update operation.", status=404)
 
     if request.method == 'POST':
+        # item_id is now received directly as a URL parameter
+        item = get_object_or_404(model, id=item_id)
         data = request.POST.copy()
+
+        # Handle files (like images) and merge with POST data
+        for file_key, file_obj in request.FILES.items():
+            data[file_key] = file_obj
 
         for fk_key, fk_queryset in get_model_fields(model)['fk_fields'].items():
             if fk_key in data:
+                raw_fk_value_list = data.pop(fk_key)
+                if not raw_fk_value_list:
+                    setattr(item, fk_key, None)
+                    continue
+
+                fk_value = raw_fk_value_list[0]
+
+                if fk_key == 'category' and fk_value.lower() == 'all':
+                    setattr(item, fk_key, None)
+                    continue 
+
+                fk_model = fk_queryset.model
                 try:
-                    fk_id = data.pop(fk_key)[0]
-                    fk_model = fk_queryset.model
+                    fk_id = int(fk_value)
                     setattr(item, fk_key, fk_model.objects.get(id=fk_id))
-                except (IndexError, fk_model.DoesNotExist) as e:
-                    print(f"FK error for {fk_key} during update: {e}")
-                    return HttpResponse(f"Error updating item: Invalid FK for {fk_key}", status=400)
+                except (ValueError, fk_model.DoesNotExist):
+                    try:
+                        setattr(item, fk_key, fk_model.objects.get(name__iexact=fk_value))
+                    except fk_model.DoesNotExist:
+                        print(f"FK error for {fk_key} (value: {fk_value}): Does not exist by ID or Name.")
+                        return HttpResponse(f"Error updating item: Invalid selection for {fk_key}.", status=400)
+                    except Exception as inner_e:
+                        print(f"Unexpected error when trying to get FK by name for {fk_key}: {inner_e}")
+                        return HttpResponse(f"Error updating item: Invalid selection for {fk_key}.", status=400)
 
         if 'csrfmiddlewaretoken' in data:
             del data['csrfmiddlewaretoken']
+        if 'id' in data: # Remove id from data, as item_id is from URL now
+            del data['id']
 
         try:
             for field_name, value in data.items():
@@ -236,30 +369,65 @@ def update_view(request, link, item_id):
                     setattr(item, field_name, value)
                 elif isinstance(field, BooleanField):
                     setattr(item, field_name, (value.lower() == 'on' or value.lower() == 'true'))
+                elif isinstance(field, ImageField): # Handle ImageField explicitly
+                    if value: # If a new file is uploaded
+                        setattr(item, field_name, value)
+                    # If no new file is uploaded, keep the existing one (do nothing)
+                    # To clear an image, you'd need a separate mechanism (e.g., a "clear image" checkbox)
                 else:
                     setattr(item, field_name, value)
             item.save()
-            return redirect(reverse('Admin:model_dt', kwargs={'model_name': link}))
+            return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={main_item}&category={category}")
         except Exception as e:
             print(f"Error updating {model_name}: {e}")
             return HttpResponse(f"Error updating item: {e}", status=400)
     return HttpResponse("Invalid request method for update.", status=405)
 
 
-def delete_view(request, link, item_id):
-    model_name = link.capitalize()
-    model = apps.get_model('Admin', model_name)
-    item = get_object_or_404(model, id=item_id)
-    if request.method == 'GET':
+def delete_item(request, model_name, item_id): # item_id is now passed from URL
+    referer_path = request.META.get('HTTP_REFERER', '/')
+    parsed_referer = reverse('Admin:dynamic_dt_overview')
+    main_item = model_name
+    category = 'All'
+
+    if 'main_item=' in referer_path:
+        from urllib.parse import urlparse, parse_qs
+        parsed_url = urlparse(referer_path)
+        query_params = parse_qs(parsed_url.query)
+        main_item = query_params.get('main_item', [model_name])[0]
+        category = query_params.get('category', ['All'])[0]
+
+    model_map = {
+        'product': PetStoreProduct,
+        'customer': Customer,
+        'order': Order,
+        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
+        'billing': Billing,
+    }
+    model = model_map.get(model_name)
+    if not model:
+        return HttpResponse("Model not found for delete operation.", status=404)
+
+    if request.method == 'POST':
+        # item_id is now received directly as a URL parameter
+        item = get_object_or_404(model, id=item_id)
         item.delete()
-        return redirect(reverse('Admin:model_dt', kwargs={'model_name': link}))
+        return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={main_item}&category={category}")
     return HttpResponse("Invalid request method for delete.", status=405)
 
 def export_csv_view(request, link):
     model_name = link.capitalize()
-    try:
-        model = apps.get_model('Admin', model_name)
-    except LookupError:
+    
+    model_map = {
+        'product': PetStoreProduct,
+        'customer': Customer,
+        'order': Order,
+        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
+        'billing': Billing,
+    }
+    model = model_map.get(model_name.lower())
+
+    if not model:
         return HttpResponse("Model not found.", status=404)
 
     items = model.objects.all()
@@ -339,7 +507,17 @@ def create_filter_view(request, link):
 
         request.session[f'filters_{link}'] = filter_data
         request.session.modified = True
-        return redirect(reverse('Admin:model_dt', kwargs={'model_name': link}))
+        referer_path = request.META.get('HTTP_REFERER', '/')
+        main_item = link
+        category = 'All'
+        if 'main_item=' in referer_path:
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(referer_path)
+            query_params = parse_qs(parsed_url.query)
+            main_item = query_params.get('main_item', [link])[0]
+            category = query_params.get('category', ['All'])[0]
+
+        return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={main_item}&category={category}")
     return HttpResponse("Invalid request method for create filter.", status=405)
 
 def delete_filter_view(request, link, filter_id):
@@ -349,21 +527,22 @@ def delete_filter_view(request, link, filter_id):
     
     request.session[session_key] = [f for f in filter_data if f.get('id') != filter_id]
     request.session.modified = True
-    return redirect(reverse('Admin:model_dt', kwargs={'model_name': link}))
+    referer_path = request.META.get('HTTP_REFERER', '/')
+    main_item = link
+    category = 'All'
+    if 'main_item=' in referer_path:
+        from urllib.parse import urlparse, parse_qs
+        parsed_url = urlparse(referer_path)
+        query_params = parse_qs(parsed_url.query)
+        main_item = query_params.get('main_item', [link])[0]
+        category = query_params.get('category', ['All'])[0]
+    return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={main_item}&category={category}")
 
-def dyn_api_index(request):
-    context = get_base_context(request)
-    context['segment'] = 'dynamic_api'
-    context['page_title'] = "Dynamic API Endpoints"
-
-    managed_models = ['Product', 'Customer', 'Order']
-    routes = [model.lower() for model in managed_models]
-    context['routes'] = routes
-    return render(request, 'admin_app/dyn_api/index.html', context)
-
-def model_api_view(request, model_name):
+def model_api(request, model_name):
     try:
         model = apps.get_model('Admin', model_name.capitalize())
+        if model_name.lower() == 'product':
+            model = PetStoreProduct
     except LookupError:
         return JsonResponse({'error': 'Model not found.'}, status=404)
 
@@ -379,12 +558,12 @@ def model_api_view(request, model_name):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
-def charts_index(request):
+def charts(request):
     context = get_base_context(request)
     context['segment'] = 'charts'
     context['page_title'] = "Sales & Product Charts"
 
-    products_for_chart = Product.objects.all().values('name', 'price')
+    products_for_chart = PetStoreProduct.objects.all().values('name', 'original_price') # Changed to original_price
     products_data = list(products_for_chart)
     products_json_string = json.dumps(products_data)
     context['products_for_chart'] = products_json_string
@@ -399,7 +578,7 @@ def charts_index(request):
 
     return render(request, 'admin_app/charts/index.html', context)
 
-def billing_view(request):
+def billing(request):
     context = get_base_context(request)
     context['segment'] = 'billing'
     context['page_title'] = "Billing Management"
@@ -408,7 +587,7 @@ def billing_view(request):
     context['invoices'] = invoices
     return render(request, 'admin_app/billing/index.html', context)
 
-def user_management_view(request):
+def user_management(request):
     context = get_base_context(request)
     context['segment'] = 'user_management'
     context['page_title'] = "User Account Management"
