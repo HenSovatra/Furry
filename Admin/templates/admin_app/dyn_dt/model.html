@@ -5,17 +5,8 @@
 
 
 {% block extrastyle %}
-<style>
-    .search-bar-container .col-md-6 .form-label { /* Added .col-md-6 for more specificity */
-        white-space: nowrap; /* Prevents the text from wrapping */
-
-    }
-
-    .search-bar-container .input-group-outline { /* This rule is now largely redundant if input-group-outline is removed, but harmless */
-        margin-bottom: 0 !important;
-        margin-top: 0 !important;
-    }
-</style>
+{# Link your custom CSS file #}
+<link rel="stylesheet" href="{% static 'assets/css/tablemodel.css' %}">
 {% endblock extrastyle %}
 
 {% block content %}
@@ -25,7 +16,7 @@
         <div class="col-12">
             {# Main Navigation Tabs (Product, Customer, Order, OrderItem, Billing) #}
             <div class="card mb-4">
-                <div class="card-header pb-0">
+                <div class="card-header pb-0" style="position: sticky; top: 0; background-color: white; z-index: 100;">
                     <h6>Select Data Table</h6>
                 </div>
                 <div class="card-body">
@@ -125,9 +116,9 @@
                     </div>
                     <div class="row mt-3 align-items-center">
                         <div class="col-md-4 search-bar-container">
-                            <div class="input-group input-group-outline focused is-filled">
-                                <label class="form-label">Search</label>
-                                <input type="text" class="form-control" id="searchInput" onkeyup="searchTable(event)" value="{{ request.GET.search }}"> </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <label class="form-label me-2 mb-0">Search:</label>
+                                <input type="text" class="form-control flex-grow-1" id="searchInput" onkeyup="performLiveSearch()" value="{{ request.GET.search }}">    </div>
                         </div>
                         <div class="col-md-8 d-flex justify-content-end align-items-center">
                             
@@ -161,7 +152,7 @@
                             <div class="d-flex flex-wrap gap-2">
                                 {% for filter in filter_instance %}
                                 <span class="badge badge-pill badge-lg bg-gradient-info text-white">
-                                    filter.key|title|replace:"_, "
+                                    {{ filter.key|title|replace:"_, " }}: {{ filter.value }}
                                     <a href="{% url 'Admin:delete_filter' set_main_item filter.id %}" class="text-white ms-1" style="text-decoration: none;">&times;</a>
                                 </span>
                                 {% endfor %}
@@ -525,41 +516,155 @@
 
 {% block extra_js %}
 <script>
-    function searchTable() {
-        var input, filter, url;
-        input = document.getElementById("searchInput");
-        filter = input.value.toUpperCase();
-        
-        url = new URL(window.location.href);
-        if (filter) {
-            url.searchParams.set('search', filter);
-        } else {
-            url.searchParams.delete('search');
-        }
-        window.location.href = url.toString();
-    }
-
-    function changePageItems(itemsPerPage) {
-        fetch("{% url 'Admin:create-page-items' set_main_item %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: 'items=' + itemsPerPage
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                window.location.reload(); 
+    // --- Material Dashboard Input Styling Functions (KEEP THESE AS IS) ---
+    function focused(element) {
+        const inputGroup = element.parentElement;
+        if (inputGroup.classList.contains('input-group-outline')) {
+            if (element.hasAttribute('value') && element.value !== '') {
+                inputGroup.classList.add('is-filled');
             } else {
-                alert('Error updating items per page: ' + data.message);
+                inputGroup.classList.remove('is-filled');
             }
-        })
-        .catch(error => console.error('Error:', error));
+        }
+        if (inputGroup.classList.contains('input-group-static')) {
+            if (element.hasAttribute('value') && element.value !== '') {
+                inputGroup.classList.add('is-filled');
+            } else {
+                inputGroup.classList.remove('is-filled');
+            }
+        }
+        inputGroup.classList.toggle('focused');
     }
 
-    // This dynamically adds filter input fields
+    function defocused(element) { // Ensure defocused is also defined and correctly interacts with Material Dashboard
+        const inputGroup = element.parentElement;
+        inputGroup.classList.toggle('focused');
+        if (inputGroup.classList.contains('input-group-outline') || inputGroup.classList.contains('input-group-static')) {
+            if (element.value === '') {
+                inputGroup.classList.remove('is-filled');
+            }
+        }
+    }
+
+    // --- Core Live Search Functionality ---
+    // --- Core Live Search Functionality ---
+    let searchTimeoutId; // Renamed to avoid potential global conflicts
+
+    // This function will be called on 'keyup' event
+    function performLiveSearch() {
+        // Clear any previous timeout to reset the debounce timer
+        clearTimeout(searchTimeoutId);
+
+        // Set a new timeout to run the search logic after a brief delay (e.g., 300ms)
+        searchTimeoutId = setTimeout(() => {
+            const searchInput = document.getElementById('searchInput');
+            if (!searchInput) {
+                console.error('Error: Search input element (ID "searchInput") not found.');
+                return; // Stop if the input isn't found
+            }
+
+            const searchValue = searchInput.value.toLowerCase().trim(); // Get value, convert to lowercase, remove leading/trailing spaces
+
+            // Use a more specific selector for the table body to avoid conflicts
+            const tableBody = document.querySelector('.card-body.px-0.pt-0.pb-2 table tbody');
+            if (!tableBody) {
+                console.error('Error: Table body element not found. Check the HTML structure: .card-body.px-0.pt-0.pb-2 table tbody');
+                return; // Stop if the table body isn't found
+            }
+
+            const rows = tableBody.getElementsByTagName('tr');
+
+            // If no search value, show all rows and exit
+            if (searchValue === '') {
+                for (let i = 0; i < rows.length; i++) {
+                    rows[i].style.display = ''; // Show all rows
+                }
+                console.log('Search cleared: Showing all rows.');
+                return;
+            }
+
+            let visibleRowCount = 0;
+            for (let i = 0; i < rows.length; i++) {
+                let row = rows[i];
+                // *** MODIFIED LINE HERE: Target the product name specifically ***
+                // Find the <h6> element within the first <td> of the current row
+                const productNameElement = row.querySelector('td:first-child h6.mb-0.text-sm');
+
+                if (!productNameElement) {
+                    // console.warn('Product name element not found in row. Skipping row for search.', row);
+                    continue; // Skip this row if name element isn't found
+                }
+
+                let nameText = productNameElement.textContent.toLowerCase(); // Get only the name's text
+
+                if (nameText.includes(searchValue)) {
+                    row.style.display = ''; // Show the row
+                    visibleRowCount++;
+                } else {
+                    row.style.display = 'none'; // Hide the row
+                }
+            }
+            console.log(`Live Search (by Name): "${searchValue}" - Found ${visibleRowCount} matching rows.`);
+
+        }, 300); // 300 milliseconds debounce delay
+    }
+
+    // --- Event Listener Setup (KEEP THIS AS IS) ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            // Attach the search function to the keyup event
+            searchInput.addEventListener('keyup', performLiveSearch);
+
+            // Optional: Run search on page load if the input already has a value (e.g., from browser history/autofill)
+            if (searchInput.value.length > 0) {
+                performLiveSearch();
+            }
+
+            // Ensure Material Dashboard's 'is-filled' class is correctly applied on load
+            const inputGroup = searchInput.closest('.input-group-outline');
+            if (inputGroup && searchInput.value !== '') {
+                inputGroup.classList.add('is-filled');
+            } else if (inputGroup && searchInput.value === '') {
+                inputGroup.classList.remove('is-filled');
+            }
+        } else {
+            console.error('Initial setup: Search input element (ID "searchInput") not found.');
+        }
+    });
+
+    // --- Material Dashboard Input Styling Functions (KEEP THESE AS IS) ---
+    function focused(element) {
+        const inputGroup = element.parentElement;
+        if (inputGroup.classList.contains('input-group-outline')) {
+            if (element.hasAttribute('value') && element.value !== '') {
+                inputGroup.classList.add('is-filled');
+            } else {
+                inputGroup.classList.remove('is-filled');
+            }
+        }
+        if (inputGroup.classList.contains('input-group-static')) {
+            if (element.hasAttribute('value') && element.value !== '') {
+                inputGroup.classList.add('is-filled');
+            } else {
+                inputGroup.classList.remove('is-filled');
+            }
+        }
+        inputGroup.classList.toggle('focused');
+    }
+
+    function defocused(element) {
+        const inputGroup = element.parentElement;
+        inputGroup.classList.toggle('focused');
+        if (inputGroup.classList.contains('input-group-outline') || inputGroup.classList.contains('input-group-static')) {
+            if (element.value === '') {
+                inputGroup.classList.remove('is-filled');
+            }
+        }
+    }
+
+    // --- Dynamic Filter Addition/Removal in Modals (KEEP THESE AS IS) ---
+    // (Your existing code for addFilterButton and removeInputContainer)
     var fieldNames = [
         {% for field in db_filters %}
             "{{ field }}",
@@ -567,6 +672,12 @@
     ];
 
     document.getElementById('addFilterButton')?.addEventListener('click', function() {
+        if (typeof fieldNames === 'undefined' || fieldNames.length === 0) {
+            console.error("Error: 'fieldNames' is not defined or empty. Cannot add filter.");
+            alert("Filter fields are not loaded. Please ensure 'fieldNames' variable is available and populated.");
+            return;
+        }
+
         var template = `
             <div class="input-container d-flex align-items-center gap-3 mb-3">
                 <div class="d-flex gap-2 w-100">
@@ -592,27 +703,6 @@
         if (inputContainers.length === 0) {
             // Optionally hide submit button if no filters are left
             // document.getElementById('submitButton').style.display = 'none';
-        }
-    }
-    function searchTable(event) {
-        // Only perform search when the 'Enter' key is pressed
-        if (event.key === 'Enter') {
-            const searchInput = document.getElementById('searchInput');
-            const searchValue = searchInput.value;
-            const currentUrl = new URL(window.location.href);
-
-            // Update or remove the 'search' query parameter
-            if (searchValue) {
-                currentUrl.searchParams.set('search', searchValue);
-            } else {
-                currentUrl.searchParams.delete('search'); // Remove search param if input is empty
-            }
-
-            // Reset the page to 1 when a new search is performed
-            currentUrl.searchParams.set('page', '1');
-
-            // Redirect to the updated URL to trigger the search
-            window.location.href = currentUrl.toString();
         }
     }
 </script>

@@ -1,28 +1,28 @@
 {% load static get_attribute %}
 
-<table class="table align-items-center mb-0">
-    <thead>
-        <tr>
-            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                AUTHOR
-            </th>
-            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                FUNCTION
-            </th>
-            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                STATUS
-            </th>
-            {# Add this line for Stock #}
-            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                STOCK
-            </th>
-            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                EMPLOYED
-            </th>
-            <th class="text-secondary opacity-7"></th> {# For actions #}
-        </tr>
-    </thead>
-    <tbody>
+<div class="table-responsive p-0">
+    <table class="table align-items-center mb-0">
+        <thead>
+            <tr>
+                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                    AUTHOR
+                </th>
+                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                    FUNCTION
+                </th>
+                <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                    STATUS
+                </th>
+                <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                    STOCK
+                </th>
+                <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                    EMPLOYED
+                </th>
+                <th class="text-secondary opacity-7"></th> {# For actions #}
+            </tr>
+        </thead>
+        <tbody>
             {% for item in items %}
             <tr class="table-row">
                 {# Author Column (Product Name and Image) #}
@@ -57,7 +57,7 @@
                         <span class="badge badge-sm bg-gradient-secondary">OFFLINE</span>
                     {% endif %}
                 </td>
-                {# Add this for Stock #}
+                {# Stock Column #}
                 <td class="align-middle text-center">
                     <span class="text-secondary text-xs font-weight-bold">{{ item.stock }}</span>
                 </td>
@@ -66,21 +66,18 @@
                     <span class="text-secondary text-xs font-weight-bold">{{ item.created_at|date:"d/m/y" }}</span>
                 </td>
                 {# Actions Column #}
-                <td class="align-middle action-td">
-                    {% if request.user.is_authenticated %}
-                        <a href="#" data-bs-toggle="modal" data-bs-target="#editSales-{{item.id}}" class="text-secondary font-weight-bold text-xs" data-toggle="tooltip" data-original-title="Edit item">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        <a href="#" data-bs-toggle="modal" data-bs-target="#deleteSales-{{item.id}}" class="text-danger font-weight-bold text-xs" data-toggle="tooltip" data-original-title="Delete item">
-                            <i class="fas fa-trash-alt"></i> Delete
-                        </a>
-                    {% else %}
-                        <a href="#" data-bs-toggle="modal" data-bs-target="#viewSales-{{item.id}}" class="text-primary font-weight-bold text-xs" data-toggle="tooltip" data-original-title="View item">
-                            <i class="fas fa-eye"></i> View
-                        </a>
-                    {% endif %}
-                </td>
+                <td class="align-middle">
+    <div class="d-flex align-items-center gap-2">
+        <a href="#" class="text-secondary font-weight-bold text-xs" ...>
+            <i class="fas fa-edit"></i> Edit
+        </a>
+        <a href="#" class="text-danger font-weight-bold text-xs" ...>
+            <i class="fas fa-trash-alt"></i> Delete
+        </a>
+    </div>
+</td>
             </tr>
             {% endfor %}
         </tbody>
-</table>
+    </table>
+</div>  
