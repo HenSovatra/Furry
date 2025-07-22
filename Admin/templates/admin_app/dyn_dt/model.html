@@ -142,8 +142,8 @@
 
                             {# Export CSV Button #}
                             <a href="{% url 'Admin:export_csv' set_main_item %}{% if request.GET.search %}?search={{ request.GET.search }}{% endif %}" class="btn btn-success btn-sm me-2">
-                                <img src="{% static 'assets/img/icons/export.png' %}" alt="Export CSV" class="export-img"> Export CSV
-                            </a>
+                                    Export CSV
+                                </a>
                         </div>
                     </div>
                     {% if filter_instance %}
@@ -307,7 +307,7 @@
 </div>
 
 {# Edit Item Modals #}
-{% for item in items %}
+{% for item in items.object_list %}
 <div class="modal fade" id="editSales-{{item.id}}" tabindex="-1" role="dialog" aria-labelledby="editSalesLabel-{{item.id}}" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -354,17 +354,19 @@
                             </select>
                         </div>
                         {# Image Upload Field (for update) #}
-                        <div class="input-group input-group-outline my-3 focused is-filled">
-                            <label class="form-label">Image</label>
-                            <input type="file" class="form-control" name="image" accept="image/*">
-                            {% if item.image %}
-                                <p class="text-xs mt-1">Current Image: <a href="{{ item.image.url }}" target="_blank">View</a></p>
-                            {% endif %}
-                        </div>
-                        <div class="form-check form-switch d-flex align-items-center mb-3 focused is-filled">
-                            <input class="form-check-input" type="checkbox" id="is_active_edit_{{item.id}}" name="is_active" {% if item.is_active %}checked{% endif %}>
-                            <label class="form-check-label mb-0 ms-3" for="is_active_edit_{{item.id}}">Is Active</label>
-                        </div>
+                            <div class="input-group input-group-outline my-3 focused is-filled">
+                                <label class="form-label">Image</label>
+                                <input type="file" class="form-control" name="image" accept="image/*">
+                                {% if item.image %}
+                                    <p class="text-xs mt-1">Current Image: <a href="{{ item.image.url }}" target="_blank">View</a></p>
+                                    {# ADD THIS HIDDEN INPUT FIELD #}
+                                    <input type="hidden" name="existing_image_url" value="{{ item.image.url }}">
+                                {% endif %}
+                            </div>
+                            <div class="form-check form-switch d-flex align-items-center mb-3 focused is-filled">
+                                <input class="form-check-input" type="checkbox" id="is_active_edit_{{item.id}}" name="is_active" {% if item.is_active %}checked{% endif %}>
+                                <label class="form-check-label mb-0 ms-3" for="is_active_edit_{{item.id}}">Is Active</label>
+                            </div>
                     {% elif set_main_item == 'customer' %}
                         <div class="input-group input-group-outline my-3 focused is-filled">
                             <label class="form-label">First Name</label>
@@ -449,7 +451,7 @@
 {% endfor %}
 
 {# Delete Item Modals #}
-{% for item in items %}
+{% for item in items.object_list %}
 <div class="modal fade" id="deleteSales-{{item.id}}" tabindex="-1" role="dialog" aria-labelledby="deleteSalesLabel-{{item.id}}" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -512,6 +514,8 @@
 </div>
 
 
+
+
 {% endblock content %}
 
 {% block extra_js %}
@@ -546,7 +550,6 @@
         }
     }
 
-    // --- Core Live Search Functionality ---
     // --- Core Live Search Functionality ---
     let searchTimeoutId; // Renamed to avoid potential global conflicts
 
@@ -609,60 +612,6 @@
         }, 300); // 300 milliseconds debounce delay
     }
 
-    // --- Event Listener Setup (KEEP THIS AS IS) ---
-    document.addEventListener('DOMContentLoaded', () => {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            // Attach the search function to the keyup event
-            searchInput.addEventListener('keyup', performLiveSearch);
-
-            // Optional: Run search on page load if the input already has a value (e.g., from browser history/autofill)
-            if (searchInput.value.length > 0) {
-                performLiveSearch();
-            }
-
-            // Ensure Material Dashboard's 'is-filled' class is correctly applied on load
-            const inputGroup = searchInput.closest('.input-group-outline');
-            if (inputGroup && searchInput.value !== '') {
-                inputGroup.classList.add('is-filled');
-            } else if (inputGroup && searchInput.value === '') {
-                inputGroup.classList.remove('is-filled');
-            }
-        } else {
-            console.error('Initial setup: Search input element (ID "searchInput") not found.');
-        }
-    });
-
-    // --- Material Dashboard Input Styling Functions (KEEP THESE AS IS) ---
-    function focused(element) {
-        const inputGroup = element.parentElement;
-        if (inputGroup.classList.contains('input-group-outline')) {
-            if (element.hasAttribute('value') && element.value !== '') {
-                inputGroup.classList.add('is-filled');
-            } else {
-                inputGroup.classList.remove('is-filled');
-            }
-        }
-        if (inputGroup.classList.contains('input-group-static')) {
-            if (element.hasAttribute('value') && element.value !== '') {
-                inputGroup.classList.add('is-filled');
-            } else {
-                inputGroup.classList.remove('is-filled');
-            }
-        }
-        inputGroup.classList.toggle('focused');
-    }
-
-    function defocused(element) {
-        const inputGroup = element.parentElement;
-        inputGroup.classList.toggle('focused');
-        if (inputGroup.classList.contains('input-group-outline') || inputGroup.classList.contains('input-group-static')) {
-            if (element.value === '') {
-                inputGroup.classList.remove('is-filled');
-            }
-        }
-    }
-
     // --- Dynamic Filter Addition/Removal in Modals (KEEP THESE AS IS) ---
     // (Your existing code for addFilterButton and removeInputContainer)
     var fieldNames = [
@@ -705,5 +654,98 @@
             // document.getElementById('submitButton').style.display = 'none';
         }
     }
+
+    // --- Event Listener Setup (MODIFIED to include Edit/Delete) ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            // Attach the search function to the keyup event
+            searchInput.addEventListener('keyup', performLiveSearch);
+
+            // Optional: Run search on page load if the input already has a value (e.g., from browser history/autofill)
+            if (searchInput.value.length > 0) {
+                performLiveSearch();
+            }
+
+            // Ensure Material Dashboard's 'is-filled' class is correctly applied on load
+            const inputGroup = searchInput.closest('.input-group-outline');
+            if (inputGroup && searchInput.value !== '') {
+                inputGroup.classList.add('is-filled');
+            } else if (inputGroup && searchInput.value === '') {
+                inputGroup.classList.remove('is-filled');
+            }
+        } else {
+            console.error('Initial setup: Search input element (ID "searchInput") not found.');
+        }
+
+
+        
+        // NEW JAVASCRIPT FOR EDIT AND DELETE BUTTONS - INTEGRATED HERE
+        const tableBody = document.querySelector('.table.align-items-center.mb-0 tbody');
+
+
+        if (tableBody) {
+            tableBody.addEventListener('click', function(event) {
+                const editButton = event.target.closest('.edit-btn');
+                if (editButton) {
+                    event.preventDefault(); // Prevent default link behavior (e.g., jumping to top)
+
+                    const modalId = editButton.dataset.bsTarget; // Get the target modal ID, e.g., "#editSales-123"
+
+                    if (modalId && document.querySelector(modalId)) {
+                        // Ensure Bootstrap's Modal class is available
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                            const myModal = new bootstrap.Modal(document.querySelector(modalId));
+                            myModal.show();
+                            console.log(`Successfully attempted to open modal: ${modalId}`);
+                        } else {
+                            console.error('Bootstrap Modal JavaScript not found. Make sure Bootstrap JS is loaded.');
+                        }
+                    } else {
+                        console.error(`Modal element not found with ID: ${modalId}`);
+                    }
+                }
+const deleteButton = event.target.closest('.delete-btn');
+                if (deleteButton) {
+                    event.preventDefault(); // Prevent default link behavior
+                    const itemId = deleteButton.dataset.itemId;
+                    const modelName = deleteButton.dataset.modelName;
+
+                    if (confirm(`Are you sure you want to delete this ${modelName} (ID: ${itemId})?`)) {
+                        const deleteUrl = deleteButton.dataset.deleteUrl;
+
+                        // Get CSRF token from a hidden input, assuming there's one in a form on the page
+                        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                        fetch(deleteUrl, {
+                            method: 'DELETE', // Use DELETE method for deletion
+                            headers: {
+                                'X-CSRFToken': csrfToken, // Include CSRF token for Django
+                                'Content-Type': 'application/json' // Indicate content type, even if body is empty
+                            }
+                            // No body is typically needed for DELETE by ID
+                        })
+                        .then(response => {
+                            if (response.ok) { // Check for 2xx status codes (200 OK, 204 No Content)
+                                alert(`${modelName} (ID: ${itemId}) deleted successfully!`);
+                                // Reload the page to reflect the changes in the table
+                                window.location.reload();
+                            } else {
+                                // Handle API errors (e.g., 404 Not Found, 403 Forbidden, 400 Bad Request)
+                                response.text().then(text => {
+                                    alert(`Failed to delete ${modelName} (ID: ${itemId}): ${text || response.statusText}`);
+                                    console.error('Delete error response:', text);
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error during fetch delete:', error);
+                            alert('An error occurred during deletion. Check console for details.');
+                        });
+                    }
+                }
+            });
+        }
+    }); // End of DOMContentLoaded
 </script>
 {% endblock extra_js %}

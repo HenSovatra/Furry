@@ -23,14 +23,14 @@
             </tr>
         </thead>
         <tbody>
-            {% for item in items %}
+            {% for item in items.object_list %}
             <tr class="table-row">
                 {# Author Column (Product Name and Image) #}
                 <td>
                     <div class="d-flex px-2 py-1 team-info">
                         <div>
                             {% if item.image %}
-                                <img src="{{ item.image.url }}" class="avatar avatar-sm me-3" alt="{{ item.name }}">
+                                <img src="{{ item.image }}" class="avatar avatar-sm me-3" alt="{{ item.name }}">
                             {% else %}
                                 <img src="{% static 'assets/img/default-product.png' %}" class="avatar avatar-sm me-3" alt="Default Product Image">
                             {% endif %}
@@ -39,7 +39,7 @@
                             <h6 class="mb-0 text-sm">{{ item.name }}</h6>
                             <p class="text-xs text-secondary mb-0">Original: {{ item.original_price }}</p>
                             {% if item.discounted_price %}
-                            <p class="text-xs text-secondary mb-0">Discounted: {{ item.discounted_price }}</p>
+                                <p class="text-xs text-secondary mb-0">Discounted: {{ item.discounted_price }}</p>
                             {% endif %}
                         </div>
                     </div>
@@ -47,37 +47,48 @@
                 {# Function Column (Product Description / Category) #}
                 <td>
                     <p class="text-xs font-weight-bold mb-0">{{ item.category.name|default:"N/A" }}</p>
-                    <p class="text-xs text-secondary mb-0">{{ item.description|truncatechars:50 }}</p>
+                    <p class="text-xs text-secondary mb-0">{{ item.description|truncatechars:30 }}</p>
                 </td>
                 {# Status Column (Product is_active) #}
                 <td class="align-middle text-center text-sm">
                     {% if item.is_active %}
-                        <span class="badge badge-sm bg-gradient-success">ONLINE</span>
+                        <span class="badge badge-sm bg-gradient-success">Active</span>
                     {% else %}
-                        <span class="badge badge-sm bg-gradient-secondary">OFFLINE</span>
+                        <span class="badge badge-sm bg-gradient-danger">Inactive</span>
                     {% endif %}
                 </td>
-                {# Stock Column #}
+                {# Stock Column (Product Stock) #}
                 <td class="align-middle text-center">
                     <span class="text-secondary text-xs font-weight-bold">{{ item.stock }}</span>
                 </td>
                 {# Employed Column (Product created_at) #}
                 <td class="align-middle text-center">
-                    <span class="text-secondary text-xs font-weight-bold">{{ item.created_at|date:"d/m/y" }}</span>
+                    <span class="text-secondary text-xs font-weight-bold">{{ item.created_at }}</span>
                 </td>
-                {# Actions Column #}
+                {# Actions Column - MODIFIED HREFS AND ADDED DATA ATTRIBUTES #}
                 <td class="align-middle">
-    <div class="d-flex align-items-center gap-2">
-        <a href="#" class="text-secondary font-weight-bold text-xs" ...>
-            <i class="fas fa-edit"></i> Edit
-        </a>
-        <a href="#" class="text-danger font-weight-bold text-xs" ...>
-            <i class="fas fa-trash-alt"></i> Delete
-        </a>
-    </div>
-</td>
+                    <div class="d-flex align-items-center gap-2">
+                        {# Ensure 'model_name' is passed to the template context. E.g., from views.py: context['model_name'] = 'product' #}
+                        <a href="#" class="text-secondary font-weight-bold text-xs edit-btn"
+                                        data-item-id="{{ item.id }}"
+                                        data-model-name="{{ model_name }}"
+                                        data-update-url="{% url 'Admin:update' model_name item.id %}"
+                                        data-bs-toggle="modal"                          {# ADD THIS LINE #}
+                                        data-bs-target="#editSales-{{item.id}}"         {# ADD THIS LINE (adjust ID if different) #}
+                                        data-bs-original-title="Edit Product">         {# Keep this if you want the tooltip #}
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                        <a href="#" class="text-danger font-weight-bold text-xs delete-btn"
+                           data-item-id="{{ item.id }}"
+                           data-model-name="{{ model_name }}"
+                           data-delete-url="{% url 'Admin:delete' model_name item.id %}" {# ADDED THIS LINE #}
+                           data-bs-toggle="tooltip" data-bs-original-title="Delete Product">
+                            <i class="fas fa-trash-alt"></i> Delete
+                        </a>
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-</div>  
+</div>

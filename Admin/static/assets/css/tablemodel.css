@@ -62,36 +62,73 @@
   border-color: #426bff;
 }
 
-/* Styles for modal form elements */
-/* Added general margin for input groups in modals for better spacing */
+/* --- RE-DESIGN FOR MODAL INPUTS START HERE --- */
+
+/* Apply flexbox to the input-group-outline within modal-body */
 .modal-body .input-group-outline {
-  margin-bottom: 25px !important; /* Increase bottom margin for better spacing between inputs */
-  margin-top: 15px !important; /* Increase top margin */
+  display: flex; /* Use flexbox to align label and input horizontally */
+  align-items: center; /* Vertically center items */
+  gap: 10px; /* Space between label and input */
+  margin-bottom: 25px !important; /* Keep your desired bottom margin */
+  margin-top: 15px !important; /* Keep your desired top margin */
+  border: none !important; /* Remove any border from the input-group-outline itself */
+  box-shadow: none !important; /* Remove any shadow */
 }
 
-/* Force labels to always be lifted for input-group-outline within modals */
+/* Force the label to be static and remove floating effects for modal inputs */
 .modal-body .input-group-outline .form-label {
-  transform: translateY(-1rem) scale(0.8); /* Forces the label to move up and shrink */
-  background-color: white; /* Add background to cover text behind it */
-  padding: 0 4px; /* Small padding around the label text */
-  z-index: 2; /* Ensure label is above input field */
-  position: absolute; /* Re-add absolute positioning to align freely */
-  left: 0.5rem; /* Slightly adjusted left position for fine-tuning */
-  top: 0.5rem; /* Slightly adjusted top position for fine-tuning */
+  position: static; /* Make label flow naturally, not absolute */
+  transform: none; /* Remove any transform that lifts it */
+  background-color: transparent; /* No background needed if not floating */
+  padding: 0; /* Remove padding */
+  z-index: auto; /* Reset z-index */
+  left: auto; /* Reset positioning */
+  top: auto; /* Reset positioning */
+  margin-bottom: 0; /* Remove any default label bottom margin */
+  white-space: nowrap; /* Keep label on one line */
+  font-weight: bold; /* Make the label stand out */
+  color: #333; /* Darker color for readability */
+  flex-shrink: 0; /* Prevent the label from shrinking */
 }
 
-/* This is if you added focused/is-filled to the input-group-outline div for pre-filled data */
+/* Style the form-control within modal inputs */
+.modal-body .input-group-outline .form-control {
+  flex-grow: 1; /* Allow the input to take available space */
+  padding: 8px 12px; /* Standard padding inside the input */
+  border: 1px solid #ced4da; /* Add a standard border */
+  border-radius: 4px; /* Add slightly rounded corners */
+  background-color: #fff; /* Ensure white background */
+}
+
+/* Ensure placeholder is visible for modal inputs */
+.modal-body .input-group-outline .form-control::placeholder {
+  opacity: 1; /* Make placeholder visible */
+}
+
+/* Remove focused/is-filled effects for these inputs if they were applied */
 .modal-body .input-group-outline.focused .form-label,
 .modal-body .input-group-outline.is-filled .form-label {
-  /* Ensure these are not overridden if you want them to behave differently when focused/filled */
-  transform: translateY(-1rem) scale(0.8); /* Reiterate if needed */
+  transform: none; /* Override any floating label transform */
+  background-color: transparent; /* Ensure no background on focus/fill */
+}
+.modal-body .input-group-outline.focused,
+.modal-body .input-group-outline.is-filled {
+  /* Remove any visual effects that might come from these classes */
+  box-shadow: none;
+  border-color: #ced4da; /* Reset border color if it changes on focus/fill */
 }
 
-/* Hide placeholder when label is forced up */
-.modal-body .input-group-outline .form-control::placeholder {
-  opacity: 0;
+/* Focus style for the input field itself */
+.modal-body .form-control:focus {
+  border-color: #007bff; /* Highlight border on focus (example blue) */
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Subtle shadow on focus */
+  outline: none; /* Remove default outline */
 }
 
+/* --- RE-DESIGN FOR MODAL INPUTS END HERE --- */
+
+
+/* Existing search-bar-container styles (keep these, as they are working for your search bar) */
 .search-bar-container .input-group-outline {
         display: flex; /* Use flexbox to align label and input horizontally */
         align-items: center; /* Vertically center items */

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from rest_framework.routers import DefaultRouter
 
 app_name = 'APIs' 
 
@@ -13,3 +14,15 @@ urlpatterns = [
     path('cart/remove/', views.remove_from_cart_api, name='api-remove-from-cart'),
     path('placeorder/', views.place_order_api, name='api-place-order'),
 ]
+
+
+# New Admin API Router and URLs
+router = DefaultRouter()
+router.register(r'admin/products', views.ProductAdminViewSet)
+router.register(r'admin/customers', views.CustomerViewSet)
+router.register(r'admin/orders', views.OrderAdminViewSet)
+router.register(r'admin/billings', views.BillingViewSet)
+router.register(r'admin/categories', views.CategoryViewSet)
+
+# Append the Admin API URLs to the existing urlpatterns
+urlpatterns += router.urls
