@@ -1,0 +1,131 @@
+{% load static %}
+{% include 'css.html' %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0">Login to Your Account</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div id="alert-messages-login" class="mb-3"></div>
+                    {% comment %} Handle messages from a redirect (e.g., after successful registration) {% endcomment %}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const params = new URLSearchParams(window.location.search);
+                            const messagesDiv = document.getElementById('alert-messages-login');
+                            if (params.get('message') === 'registration_success') {
+                                messagesDiv.innerHTML = `<div class="alert alert-success">Registration successful! Please log in.</div>`;
+                            }
+                        });
+                    </script>
+
+                    <form id="login-form" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                            <div class="invalid-feedback">Please enter your username.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="invalid-feedback">Please enter your password.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Login</button>
+                    </form>
+                    <p class="text-center mt-3">
+                        Don't have an account? <a href="{% url 'PetStore:register_html' %}">Register here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function getCookie(name) { /* ... same getCookie function as above ... */
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const messagesDiv = document.getElementById('alert-messages-login');
+        messagesDiv.innerHTML = ''; // Clear previous messages
+
+        try {
+            const response = await fetch('{% url "APIs:api-login" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'), // Include CSRF token
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store token for future authenticated requests
+                localStorage.setItem('authToken', data.token);
+                messagesDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                // Redirect to home page
+                window.location.href = '{% url "PetStore:home" %}';
+            } else {
+                // Display error message from DRF API
+                messagesDiv.innerHTML = `<div class="alert alert-danger">Login failed: ${data.error || 'Invalid credentials'}</div>`;
+            }
+        } catch (error) {
+            console.error('Network or server error:', error);
+            messagesDiv.innerHTML = `<div class="alert alert-danger">An unexpected error occurred. Please try again.</div>`;
+        }
+    });
+
+    // Handle logout from frontend (e.g., a button click)
+    document.addEventListener('DOMContentLoaded', function() {
+        const logoutLink = document.querySelector('a[href="{% url "APIs:api-logout" %}"]');
+        if (logoutLink) {
+            logoutLink.addEventListener('click', async function(e) {
+                e.preventDefault();
+                try {
+                    const response = await fetch('{% url "APIs:api-logout" %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'Authorization': `Token ${localStorage.getItem('authToken')}` // Send token for logout
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        localStorage.removeItem('authToken'); // Clear token from storage
+                        alert(data.message); // Or display as a message
+                        window.location.href = '{% url "PetStore:home" %}'; // Redirect
+                    } else {
+                        alert(`Logout failed: ${data.error || 'Server error'}`);
+                    }
+                } catch (error) {
+                    console.error('Logout network error:', error);
+                    alert('An error occurred during logout.');
+                }
+            });
+        }
+    });
+</script>

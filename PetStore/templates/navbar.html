@@ -40,7 +40,7 @@
     </div>
 </div>
    <div class="container-lg">
-     <div class="row py-4">
+     <div class="row py-4 pb-0">
 
        <div class="col-sm-6 col-md-5 col-lg-3 justify-content-center justify-content-lg-between text-center text-sm-start d-flex gap-3">
          <div class="d-flex align-items-center">
@@ -54,8 +54,8 @@
          </div>
        </div>
 
-       <div class="col-sm-12 col-md-4 col-lg-7 d-none d-md-block">
-         <div class="search-bar row justify-content-between bg-light p-2 rounded-4">
+       <div class="col-sm-10 col-md-4 col-lg-7 d-none d-md-block">
+         <div class="search-bar row justify-content-between bg-light p-2 rounded-4" style="height: 50px;">
            <div class="col-11">
              <form id="search-form" class="text-center" action="index.html" method="post">
                <input type="text" class="form-control border-0 bg-transparent"
@@ -69,6 +69,15 @@
              </svg>
            </div>
          </div>
+       </div>
+       <div class="col-sm-12 col-md-3 col-lg-2 d-none d-md-block" style="display:flex !important;align-items: center;gap: 10px;">
+        {% if user.is_authenticated %}
+       
+        <p class="m-0 fw-bold">{{ user.username }}</p>
+        <a href="{% url 'APIs:api-logout' %}" class="fs-6">Logout</a>
+        {% else %}
+            <a href="{% url 'PetStore:login_html' %}">Login</a> | <a href="{% url 'PetStore:register_html' %}">Register</a>
+        {% endif %}
        </div>
 
        <div class="col-sm-6 col-md-3 col-lg-2 d-flex justify-content-end gap-5 align-items-center mt-4 mt-sm-0 justify-content-center justify-content-sm-end">
@@ -168,3 +177,57 @@
      </nav>
    </div>
  </header>
+
+
+ <script>
+
+  function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+  const logoutLinks = document.querySelectorAll('a[href$="api/logout/"]'); // Select all logout links
+
+    logoutLinks.forEach(link => {
+        link.addEventListener('click', async function(e) {
+            e.preventDefault(); // Prevent the default link navigation
+
+            try {
+                const response = await fetch('{% url "APIs:api-logout" %}', {
+                    method: 'POST', // <--- ENSURE THIS IS 'POST'
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'), // Make sure getCookie function is available
+                        'Authorization': `Token ${localStorage.getItem('authToken')}` // Send token
+                    },
+                    // No 'body' needed for logout usually, but you can send an empty JSON object if required by server
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.removeItem('authToken'); // Clear token
+                    localStorage.removeItem('username'); // Clear username
+                    alert(data.message);
+                    window.location.href = '{% url "PetStore:home" %}'; // Redirect
+                } else {
+                    alert(`Logout failed: ${data.error || 'Server error'}`);
+                }
+            } catch (error) {
+                console.error('Logout network error:', error);
+                alert('An error occurred during logout.');
+            }
+        });
+    });
+ </script>

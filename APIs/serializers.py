@@ -1,6 +1,8 @@
 # Furry/APIs/serializers.py
 from rest_framework import serializers
 from datetime import datetime, timezone # Make sure this import is present if you use default=timezone.now
+from django.contrib.auth.models import User
+
 
 # Explicitly import models from PetStore.models with an alias for Product
 from PetStore.models import Product as PetStoreProduct, Category, Cart, CartItem, Order, OrderItem
@@ -80,3 +82,43 @@ class BillingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Billing
         fields = '__all__'
+
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    password2 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password', 'password2')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def validate(self, data):
+        if data['password'] != data['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+        return data
+
+    def create(self, validated_data):
+        # Remove password2 before creating the user
+        validated_data.pop('password2')
+        user = User.objects.create_user(**validated_data)
+        return user
+
+
+class OrderHistorySerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True) # Nested serializer for order items
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'user', 'session_key', 'total_amount', 'shipping_cost', 'status', 'payment_status',
+            'first_name', 'last_name', 'email', 'phone',
+            'address_line_1', 'address_line_2', 'city', 'state', 'zip_code', 'country',
+            # Include billing if you want it in the history API
+            'billing_first_name', 'billing_last_name', 'billing_email', 'billing_phone',
+            'billing_address_line_1', 'billing_address_line_2', 'billing_city', 'billing_state',
+            'billing_zip_code', 'billing_country',
+            'created_at', 'updated_at', 'items'
+        ]
+        read_only_fields = ['user', 'session_key', 'total_amount', 'shipping_cost', 'status', 'payment_status', 'items', 'created_at', 'updated_at']

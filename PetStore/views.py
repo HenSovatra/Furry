@@ -8,31 +8,43 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt 
 from django.views.decorators.csrf import csrf_protect 
 from django.db import transaction
-def CategoryView(request):
-    main_menu_items = MenuItem.objects.filter(parent__isnull=True, is_active=True).order_by('order').prefetch_related('children')
+from rest_framework.decorators import authentication_classes
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 
+
+def navbar(request):
+    menu_items = MenuItem.objects.filter(is_active=True, parent__isnull=True).order_by('order')
+    display_menu_items = []
+    for item in menu_items:
+        if item.requires_login and not request.user.is_authenticated:
+            continue
+        display_menu_items.append(item)
+    return display_menu_items
+
+def CategoryView(request):
     context = {
-        'main_menu_items': main_menu_items,
+        'main_menu_items': navbar(request),
     }
     return render(request, 'category.html', context) 
 
+def HistoryView(request):
+    context = {
+        'main_menu_items': navbar(request),
+    }
+    return render(request, 'history.html', context)     
 
 
 def HomeView (request):
-    main_menu_items = MenuItem.objects.filter(parent__isnull=True, is_active=True).order_by('order').prefetch_related('children')
     slides = Slide.objects.filter(is_active=True).order_by('order')
     top_level_categories = Category.objects.filter(parent__isnull=True, is_active=True).order_by('order').prefetch_related('subcategories')
-    products = Product.objects.filter(is_active=True).order_by('-created_at') 
     context = {
-        'main_menu_items': main_menu_items,
+        'main_menu_items': navbar(request),
         'slides': slides,
         'top_level_categories': top_level_categories,
-        'products': products,
     }
     return render(request, 'index.html', context) 
 
 def single_product_view(request, pk):
-    # Retrieve the product based on its primary key (pk)
     product = get_object_or_404(Product, pk=pk, is_active=True)
 
     context = {
@@ -159,12 +171,15 @@ def checkout_view(request):
     # The checkout.html template will fetch it via JS.
     return render(request, 'checkout.html')
 
-        
+@authentication_classes([TokenAuthentication, SessionAuthentication])
 def order_confirmation_view(request, order_id=None):
+    print(f"DEBUG: request.user: {request.user}")
+    print(f"DEBUG: request.user.is_authenticated: {request.user.is_authenticated}")
+    print(f"DEBUG: Session key: {request.session.session_key}")
+    print(f"DEBUG: Session data: {request.session.items()}") # See what's actually in the session
     order = None
     if order_id:
-        # Try to retrieve the order, ensuring it belongs to the current user/session
-        if request.user.is_authenticated:
+        if request.user.is_authenticated:   
             order = get_object_or_404(Order, id=order_id, user=request.user)
         else:
             session_key = request.session.session_key

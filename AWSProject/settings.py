@@ -22,6 +22,14 @@ EMAIL_HOST_USER = 'genyurosama@gmail.com'
 EMAIL_HOST_PASSWORD = 'dzpd djtg enla ocnu' # Replace with actual App Password for testing
 DEFAULT_FROM_EMAIL = 'genyurosama@gmail.com' # The email address that appears as the sender
 SERVER_EMAIL = 'genyurosama@gmail.com'
+
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_51RnMacFSxjjrivZyTYtGMlZDLjNkxBrLCLq6v5rHp6ycQSBNwGA8UUQyPRZodSEocjcUUHoJdlGnSOHPqN76QFon00amyqL8FC') # Replace with your test key
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_51RnMacFSxjjrivZy6mqoCqtGLW60MxThdv9tpoDuWw311KhKMZd0y9L4bYPX9Hwbq3WvYkFnfrNNLKDMziyQXxIr00WwtoAM2p')     # Replace with your test key
+
+if os.environ.get('DJANGO_ENV') == 'production':
+    BASE_URL = 'https://yourdomain.com'
+else:
+    BASE_URL = 'http://localhost:8000'
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -49,8 +57,20 @@ INSTALLED_APPS = [
     'PetStore',
     'Admin',    
     'rest_framework',
+    'rest_framework.authtoken',
     'APIs',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication', # Allows browser-based session auth
+        'rest_framework.authentication.TokenAuthentication',   # Allows token-based auth
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny', # Default is open, you'll apply specific permissions to views
+    ]
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

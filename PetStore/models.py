@@ -1,9 +1,10 @@
 from django.db import models
 from django.utils.text import slugify 
 from django.contrib.auth import get_user_model
-
+from decimal import Decimal
 from django.conf import settings
 import decimal
+
 class MenuItem(models.Model):
     title = models.CharField(max_length=100, help_text="The text displayed in the navigation bar.")
     url = models.CharField(
@@ -14,6 +15,12 @@ class MenuItem(models.Model):
     )
     order = models.IntegerField(default=0, help_text="The order in which menu items appear (lower numbers first).")
     is_active = models.BooleanField(default=True, help_text="Whether this menu item should be displayed.")
+    
+    # NEW FIELD:
+    requires_login = models.BooleanField(
+        default=False,
+        help_text="Check this if the menu item should only be visible to logged-in users."
+    )
     
     # Self-referential Foreign Key for parent-child relationship
     parent = models.ForeignKey(
@@ -26,7 +33,9 @@ class MenuItem(models.Model):
     )
 
     class Meta:
-        ordering = ['parent__order', 'order', 'title'] # Order by parent's order, then its own order
+        # Update ordering to potentially include requires_login or keep as is.
+        # It's usually better to filter by requires_login in the view/template.
+        ordering = ['parent__order', 'order', 'title'] 
         verbose_name = "Menu Item"
         verbose_name_plural = "Menu Items"
 
@@ -145,14 +154,13 @@ class Product(models.Model):
                 counter += 1
         super().save(*args, **kwargs)
 
-
 class Cart(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     session_key = models.CharField(max_length=40, null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     total_items = models.PositiveIntegerField(default=0)
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=decimal.Decimal('0.00')) # Use Decimal for default
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=decimal.Decimal('0.00'))
 
     class Meta:
         verbose_name = "Shopping Cart"
@@ -168,10 +176,12 @@ class Cart(models.Model):
         and the total price of all items in the cart.
         """
         # Calculate total_items
+        # Access cart items via the related_name 'items' defined in CartItem
         self.total_items = sum(item.quantity for item in self.items.all())
 
         # Calculate total_price
         # Ensure that item.total_price is calculated correctly and is a Decimal
+        # The .items.all() refers to CartItem instances linked to this cart
         self.total_price = sum(item.total_price for item in self.items.all())
 
         # Save the Cart instance to persist the updated totals
@@ -182,13 +192,15 @@ class CartItem(models.Model):
     cart = models.ForeignKey('Cart', on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey('Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+    # --- IMPORTANT ADDITION / CHANGE ---
+    # This field captures the price *at the moment* the item was added to the cart or last updated.
+    # This is crucial because product prices can change, but the price in the cart should reflect what the user saw/agreed to.
+    price_at_addition = models.DecimalField(max_digits=10, decimal_places=2, default=decimal.Decimal('0.00'))
+    # --- END IMPORTANT ADDITION / CHANGE ---
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        # This ensures that each product can only appear once in a given cart
-        # If you try to add the same product again, it will retrieve the existing CartItem
-        # instead of creating a new one.
         unique_together = ('cart', 'product')
 
     def __str__(self):
@@ -196,17 +208,32 @@ class CartItem(models.Model):
 
     @property
     def total_price(self):
-        # Always use the product's current_price for cart items
-        # because the price hasn't been "locked in" like in an OrderItem yet.
-        # Ensure current_price is a Decimal
-        price = self.product.original_price if self.product.discounted_price is None else self.product.discounted_price
-        if price is not None and self.quantity is not None:
-            return self.quantity * price
-        return decimal.Decimal('0.00') # Return Decimal 0 if values are missing
+        # Calculate total based on the price_at_addition field, not the current product price.
+        # This reflects the price captured when the item was added/last updated in the cart.
+        if self.price_at_addition is not None and self.quantity is not None:
+            return self.quantity * self.price_at_addition
+        return decimal.Decimal('0.00')
 
     def save(self, *args, **kwargs):
-        # Update current_price on product for robustness, though current_price is a property
-        # You don't need to save product here unless you're modifying product itself.
+        # --- IMPORTANT CHANGE: Capture product's current_price here ---
+        # Before saving, set price_at_addition to the product's current price
+        # This ensures the price is "locked in" for this cart item
+        if not self.pk: # Only set price_at_addition on initial creation
+            if self.product.discounted_price is not None:
+                self.price_at_addition = self.product.discounted_price
+            else:
+                self.price_at_addition = self.product.original_price
+        # If you want price_at_addition to update when quantity changes, you can put this
+        # outside the 'if not self.pk' block. However, typically it's only set once.
+        # Consider a separate mechanism if product price changes should affect existing cart items.
+        # For a standard e-commerce flow, price_at_addition is set on first add.
+        # For updates to quantity, the price_at_addition usually remains the same.
+        # If the product's price changes *after* it's in the cart, you might want to show an alert.
+        # For now, let's keep it simple: price_at_addition is set on initial addition.
+
+        # Ensure price_at_addition is always a Decimal
+        if isinstance(self.price_at_addition, float):
+             self.price_at_addition = decimal.Decimal(str(self.price_at_addition))
 
         super().save(*args, **kwargs) # Call the "real" save() method.
         # After saving this CartItem, update the parent Cart's totals.
@@ -218,82 +245,59 @@ class CartItem(models.Model):
         # Update the parent Cart's totals after deleting this item.
         cart_to_update.update_totals()
 
-class Order(models.Model):
-    # Link to a User (if authenticated) or allow null for guest checkout
-    user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
-    
-    # Session key for guest users before or if not logged in
-    session_key = models.CharField(max_length=40, null=True, blank=True) 
 
-    # Shipping Address Details
+class Order(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, null=True, blank=True)
+    session_key = models.CharField(max_length=40, null=True, blank=True) # For guest orders
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=50, default='Pending') # e.g., 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'
+    payment_status = models.CharField(max_length=50, default='Pending') # e.g., 'Pending', 'Paid', 'Refunded', 'Failed'
+    created_at = models.DateTimeField(auto_now_add=True)
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    updated_at = models.DateTimeField(auto_now=True)
+    payment_method = models.CharField(max_length=50, blank=True, null=True)
+
+    billing_first_name = models.CharField(max_length=100, blank=True, null=True)
+    billing_last_name = models.CharField(max_length=100, blank=True, null=True)
+    billing_email = models.EmailField(blank=True, null=True)
+    billing_phone = models.CharField(max_length=20, blank=True, null=True)
+    billing_address_line_1 = models.CharField(max_length=255, blank=True, null=True)
+    billing_address_line_2 = models.CharField(max_length=255, blank=True, null=True)
+    billing_city = models.CharField(max_length=100, blank=True, null=True)
+    billing_state = models.CharField(max_length=100, blank=True, null=True)
+    billing_zip_code = models.CharField(max_length=20, blank=True, null=True)
+    billing_country = models.CharField(max_length=100, blank=True, null=True)
+    # Billing Information (from checkout form)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField()
-    phone = models.CharField(max_length=20, blank=True, null=True) # Optional phone
+    phone = models.CharField(max_length=20)
     address_line_1 = models.CharField(max_length=255)
     address_line_2 = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100, blank=True, null=True) # Optional state/province
+    state = models.CharField(max_length=100)
     zip_code = models.CharField(max_length=20)
     country = models.CharField(max_length=100)
 
-    # Order Status (you can customize these choices)
-    STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Processing', 'Processing'),
-        ('Shipped', 'Shipped'),
-        ('Delivered', 'Delivered'),
-        ('Cancelled', 'Cancelled'),
-    ]
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
+    # NEW: Field to store Stripe Payment Intent ID
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
 
-    # Financial Details
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    
-    # Payment status (can expand with more options later)
-    PAYMENT_STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Paid', 'Paid'),
-        ('Failed', 'Failed'),
-    ]
-    payment_status = models.CharField(max_length=50, choices=PAYMENT_STATUS_CHOICES, default='Pending')
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
-        verbose_name = "Order"
-        verbose_name_plural = "Orders"
 
     def __str__(self):
-        return f"Order {self.id} by {self.first_name} {self.last_name}"
+        return f"Order {self.id} by {self.user.username if self.user else self.session_key}"
 
-    # Helper property to get the full shipping address
     @property
-    def full_address(self):
-        address = f"{self.address_line_1}"
-        if self.address_line_2:
-            address += f", {self.address_line_2}"
-        address += f", {self.city}, {self.state or ''} {self.zip_code}, {self.country}"
-        return address.strip(', ')
+    def get_cart_total(self):
+        return sum(item.get_total for item in self.items.all())
 
-
-# Order Item Model
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(max_digits=10, decimal_places=2) # Price at the time of order
-
-    class Meta:
-        verbose_name = "Order Item"
-        verbose_name_plural = "Order Items"
-
+    price = models.DecimalField(max_digits=10, decimal_places=2) # Price at time of order
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
     def __str__(self):
         return f"{self.quantity} x {self.product.name} in Order {self.order.id}"
-
-    # Property to calculate total price for this specific order item
-    @property
-    def total_price(self):
-        return self.quantity * self.price

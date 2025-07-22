@@ -1,0 +1,117 @@
+{% load static %}
+{% include 'css.html' %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0">Create an Account</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div id="alert-messages-register" class="mb-3"></div>
+                    <form id="register-form" class="needs-validation" novalidate>
+                        {% csrf_token %} {# Still good practice for initial page load, though API might not strictly need it for POST to AllowAny #}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                            <div class="invalid-feedback">Please choose a username.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email address</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                            <div class="invalid-feedback">Please enter a valid email address.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="invalid-feedback">Please enter a password.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password2" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="password2" name="password2" required>
+                            <div class="invalid-feedback">Please confirm your password.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Register</button>
+                    </form>
+                    <p class="text-center mt-3">
+                        Already have an account? <a href="{% url 'PetStore:login_html' %}">Login here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Helper to get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    document.getElementById('register-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const password2 = document.getElementById('password2').value;
+        const messagesDiv = document.getElementById('alert-messages-register');
+        messagesDiv.innerHTML = ''; // Clear previous messages
+
+        if (password !== password2) {
+            messagesDiv.innerHTML = `<div class="alert alert-danger">Passwords do not match.</div>`;
+            return;
+        }
+
+        try {
+            const response = await fetch('{% url "APIs:api-register" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'), // Include CSRF token
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password,
+                    password2: password2
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                messagesDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                // Store token for future authenticated requests
+                localStorage.setItem('authToken', data.token);
+                // Redirect to login page or home
+                window.location.href = '{% url "PetStore:login_html" %}?message=registration_success'; // Redirect to login
+            } else {
+                // Display validation errors from DRF serializer
+                let errorMessage = '';
+                for (const key in data) {
+                    if (Array.isArray(data[key])) {
+                        errorMessage += `<p>${key}: ${data[key].join(', ')}</p>`;
+                    } else {
+                        errorMessage += `<p>${data[key]}</p>`;
+                    }
+                }
+                messagesDiv.innerHTML = `<div class="alert alert-danger">Error during registration: ${errorMessage}</div>`;
+            }
+        } catch (error) {
+            console.error('Network or server error:', error);
+            messagesDiv.innerHTML = `<div class="alert alert-danger">An unexpected error occurred. Please try again.</div>`;
+        }
+    });
+</script>

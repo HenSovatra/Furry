@@ -19,7 +19,7 @@
             </div>
         </div>
 
-        {# Shipping and Payment Form Column (remains the same) #}
+        {# Shipping and Payment Form Column #}
         <div class="col-lg-6 order-lg-1">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
@@ -33,17 +33,17 @@
                             <div class="col-sm-6">
                                 <label for="first_name" class="form-label">First Name</label>
                                 <input type="text" class="form-control" id="first_name" name="first_name" required
-                                       value="{% if user.is_authenticated %}{{ user.first_name }}{% endif %}">
+                                        value="{% if user.is_authenticated %}{{ user.first_name }}{% endif %}">
                             </div>
                             <div class="col-sm-6">
                                 <label for="last_name" class="form-label">Last Name</label>
                                 <input type="text" class="form-control" id="last_name" name="last_name" required
-                                       value="{% if user.is_authenticated %}{{ user.last_name }}{% endif %}">
+                                        value="{% if user.is_authenticated %}{{ user.last_name }}{% endif %}">
                             </div>
                             <div class="col-12">
                                 <label for="email" class="form-label">Email</label>
                                 <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required
-                                       value="{% if user.is_authenticated %}{{ user.email }}{% endif %}">
+                                        value="{% if user.is_authenticated %}{{ user.email }}{% endif %}">
                             </div>
                             <div class="col-12">
                                 <label for="phone" class="form-label">Phone (Optional)</label>
@@ -61,22 +61,22 @@
                                 <label for="country" class="form-label">Country</label>
                                 <select class="form-select" id="country" name="country" required>
                                     <option value="">Choose...</option>
-                                    <option value="USA">United States</option>
-                                    <option value="CAN">Canada</option>
-                                    <option value="UK">United Kingdom</option>
-                                    <option value="AUS">Australia</option>
-                                    <option value="OTH">Other</option>
+                                    <option value="US" selected>United States</option> {# Pre-select US #}
+                                    <option value="CA">Canada</option>
+                                    <option value="GB">United Kingdom</option>
+                                    <option value="AU">Australia</option>
+                                    <option value="OTHER">Other</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label for="state" class="form-label">State / Province</label>
-                                <input type="text" class="form-control" id="state" name="state">
+                                <input type="text" class="form-control" id="state" name="state" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="zip_code" class="form-label">Zip Code</label>
                                 <input type="text" class="form-control" id="zip_code" name="zip_code" required>
                             </div>
-                             <div class="col-md-6">
+                            <div class="col-md-6">
                                 <label for="city" class="form-label">City</label>
                                 <input type="text" class="form-control" id="city" name="city" required>
                             </div>
@@ -120,11 +120,11 @@
                                     <label for="billing_country" class="form-label">Country</label>
                                     <select class="form-select" id="billing_country" name="billing_country">
                                         <option value="">Choose...</option>
-                                        <option value="USA">United States</option>
-                                        <option value="CAN">Canada</option>
-                                        <option value="UK">United Kingdom</option>
-                                        <option value="AUS">Australia</option>
-                                        <option value="OTH">Other</option>
+                                        <option value="US" selected>United States</option>
+                                        <option value="CA">Canada</option>
+                                        <option value="GB">United Kingdom</option>
+                                        <option value="AU">Australia</option>
+                                        <option value="OTHER">Other</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
@@ -144,16 +144,24 @@
 
                         <hr class="my-4">
 
-                        <h5 class="mb-3">Payment Method</h5>
-                        <div class="my-3">
+                        <div class="mb-3">
+                            <h5 class="mb-3">Payment Method</h5>
                             <div class="form-check">
                                 <input id="credit" name="paymentMethod" type="radio" class="form-check-input" value="credit_card" checked required>
                                 <label class="form-check-label" for="credit">Credit card</label>
                             </div>
                             <div class="form-check">
-                                <input id="paypal" name="paymentMethod" type="radio" class="form-check-input" value="paypal" required>
+                                <input id="paypal" name="paymentMethod" type="radio" class="form-check-input" value="paypal" required disabled> {# Keep PayPal disabled for now #}
                                 <label class="form-check-label" for="paypal">PayPal</label>
                             </div>
+                        </div>
+
+                        {# Stripe Card Element Div #}
+                        <div class="col-12 mt-3" id="stripe-card-section">
+                            <label for="card-element" class="form-label">Credit or debit card</label>
+                            <div id="card-element" class="form-control p-2" style="min-height: 40px;">
+                                </div>
+                            <div id="card-errors" role="alert" class="text-danger mt-2"></div>
                         </div>
 
                         <hr class="my-4">
@@ -164,19 +172,26 @@
             </div>
         </div>
     </div>
+    {# Add a div for general checkout messages #}
+    <div id="checkout-messages" class="mt-4"></div>
 </div>
 
 
 {% include "scripts.html" %}
 
+{# NEW: Stripe.js v3 Library #}
+<script src="https://js.stripe.com/v3/"></script>
+
 <script>
-   $(document).ready(function() {
+    $(document).ready(function() {
         const $sameAddressCheckbox = $('#same-address');
         const $billingAddressSection = $('#billing-address-section');
         const $billingFields = $billingAddressSection.find('input, select');
         const $checkoutForm = $('#checkout-form');
         const $placeOrderBtn = $('#place-order-btn');
-        const $checkoutCartSummary = $('#checkout-cart-summary'); // New element for cart summary
+        const $checkoutCartSummary = $('#checkout-cart-summary');
+        const $cardErrorsDiv = $('#card-errors');
+        const $checkoutMessagesDiv = $('#checkout-messages'); // Ensure this div exists in HTML, or add it for messages
 
         // Function to get CSRF token from cookie (re-used from main.js or defined here)
         function getCookie(name) {
@@ -232,65 +247,52 @@
             $('#billing_city').val($('#city').val());
         }
 
-        // --- NEW: Fetch and render cart summary for checkout page ---
-        var fetchAndRenderCheckoutCartSummary = function() {
-            $checkoutCartSummary.html('<p class="text-center text-muted">Loading cart summary...</p>');
+        // --- NEW: Stripe Integration START ---
 
-            $.ajax({
-                url: '{% url "APIs:api-cart-details" %}', // Your cart details API
-                method: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    let summaryHtml = '';
-                    if (response.cart_items && response.cart_items.length > 0) {
-                        summaryHtml += '<ul class="list-group list-group-flush mb-3">';
-                        response.cart_items.forEach(item => {
-                            const unitPrice = item.product.current_price !== undefined && item.product.current_price !== null
-                                              ? item.product.current_price.toFixed(2) : '0.00';
-                            const itemTotalPrice = item.total_price !== undefined && item.total_price !== null
-                                                   ? item.total_price.toFixed(2) : '0.00';
+        // Initialize Stripe with your publishable key
+        // Make sure settings.STRIPE_PUBLISHABLE_KEY is passed from Django context
+        // IMPORTANT: In a real production environment, you would use a Django template tag
+        // or a JavaScript variable passed from the view to inject the public key.
+        // For now, I'm using the one from your code.
+        const stripe = Stripe('pk_test_51RnMacFSxjjrivZyTYtGMlZDLjNkxBrLCLq6v5rHp6ycQSBNwGA8UUQyPRZodSEocjcUUHoJdlGnSOHPqN76QFon00amyqL8FC');
+        const elements = stripe.elements();
 
-                            summaryHtml += `
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="my-0">${item.product.name}</h6>
-                                        <small class="text-muted">Quantity: ${item.quantity} x $${unitPrice}</small>
-                                    </div>
-                                    <span class="text-muted">$${itemTotalPrice}</span>
-                                </li>
-                            `;
-                        });
-                        summaryHtml += '</ul>';
-                        summaryHtml += '<hr>';
-                        summaryHtml += `
-                            <div class="d-flex justify-content-between align-items-center fw-bold fs-5">
-                                <span>Total (USD)</span>
-                                <strong>$${response.total.toFixed(2)}</strong>
-                            </div>
-                        `;
-                        $placeOrderBtn.prop('disabled', false); // Enable place order button
-                    } else {
-                        summaryHtml = `
-                            <p class="text-center text-muted">Your cart is empty. Please add items to proceed.</p>
-                            <div class="text-center mt-3">
-                                <a href="{% url 'PetStore:home' %}" class="btn btn-info">Continue Shopping</a>
-                            </div>
-                        `;
-                        $placeOrderBtn.prop('disabled', true); // Disable place order button
-                    }
-                    $checkoutCartSummary.html(summaryHtml);
+        // Create an instance of the card Element.
+        const card = elements.create('card', {
+            style: {
+                base: {
+                    fontSize: '16px',
+                    color: '#32325d',
+                    '::placeholder': {
+                        color: '#aab7c4',
+                    },
                 },
-                error: function(xhr, status, error) {
-                    console.error('Error fetching checkout cart summary:', status, error, xhr.responseText);
-                    $checkoutCartSummary.html('<p class="text-danger text-center">Failed to load cart summary. Please try again.</p>');
-                    $placeOrderBtn.prop('disabled', true);
-                }
-            });
-        };
+                invalid: {
+                    color: '#fa755a',
+                    iconColor: '#fa755a',
+                },
+            },
+        });
 
-        // Handle form submission via AJAX
-        $checkoutForm.on('submit', function(event) {
+        // Add an instance of the card Element into the `card-element` div.
+        card.mount('#card-element');
+
+        // Handle real-time validation errors from the card Element.
+        card.on('change', function(event) {
+            if (event.error) {
+                $cardErrorsDiv.text(event.error.message);
+            } else {
+                $cardErrorsDiv.text('');
+            }
+        });
+
+        // --- NEW: Handle form submission via AJAX with Stripe (NO AUTH TOKEN) ---
+        $checkoutForm.on('submit', async function(event) {
             event.preventDefault();
+
+            // Clear previous messages
+            $checkoutMessagesDiv.html('');
+            $cardErrorsDiv.html('');
 
             if (!this.checkValidity()) {
                 event.stopPropagation();
@@ -298,7 +300,13 @@
                 return;
             }
 
-            $placeOrderBtn.prop('disabled', true).text('Processing...');
+            // If PayPal is selected, prevent Stripe logic for now
+            if ($('input[name="paymentMethod"]:checked').val() === 'paypal') {
+                $checkoutMessagesDiv.html('<div class="alert alert-warning">PayPal is not yet integrated. Please select Credit Card.</div>');
+                return;
+            }
+
+            $placeOrderBtn.prop('disabled', true).text('Processing Payment...');
 
             let formData = {};
             $(this).find('input, select, textarea').each(function() {
@@ -315,6 +323,7 @@
                 }
             });
 
+            // Copy shipping to billing if checkbox is checked
             if ($sameAddressCheckbox.is(':checked')) {
                 formData['billing_first_name'] = formData['first_name'];
                 formData['billing_last_name'] = formData['last_name'];
@@ -328,43 +337,191 @@
                 formData['billing_city'] = formData['city'];
             }
 
-            $.ajax({
-                url: '{% url "APIs:api-place-order" %}', // Point to the new API endpoint
-                method: 'POST',
-                data: JSON.stringify(formData),
-                contentType: 'application/json',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        alert(response.message);
-                        window.location.href = response.redirect_url;
-                    } else {
-                        let errorMessages = '';
-                        if (response.error) {
-                            errorMessages = response.error;
-                        } else if (response.errors) {
-                            for (const field in response.errors) {
-                                errorMessages += `${field}: ${response.errors[field].join(', ')}\n`;
-                            }
+            try {
+                // Step 1: Create a PaymentMethod from the card Element
+                const { paymentMethod, error: createPaymentMethodError } = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: card,
+                    billing_details: {
+                        name: `${formData.first_name} ${formData.last_name}`,
+                        email: formData.email,
+                        phone: formData.phone, // Include phone from form
+                        address: {
+                            line1: formData.billing_address_line_1,
+                            line2: formData.billing_address_line_2,
+                            city: formData.billing_city,
+                            state: formData.billing_state,
+                            postal_code: formData.billing_zip_code,
+                            country: formData.billing_country,
+                        },
+                    },
+                });
+
+                if (createPaymentMethodError) {
+                    $cardErrorsDiv.text(createPaymentMethodError.message);
+                    $placeOrderBtn.prop('disabled', false).text('Place Order');
+                    return;
+                }
+
+                // Step 2: Send paymentMethod.id and shipping info to your backend to create a PaymentIntent
+                formData.payment_method_id = paymentMethod.id;
+
+                const initialResponse = await fetch('{% url "APIs:api-place-order" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') // Always send CSRF token for POST
+                        // NO 'Authorization' header here for guest checkout
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const initialData = await initialResponse.json();
+
+                if (!initialResponse.ok) {
+                    $checkoutMessagesDiv.html(`<div class="alert alert-danger">Order failed: ${initialData.error || 'Unknown server error'}</div>`);
+                    $placeOrderBtn.prop('disabled', false).text('Place Order');
+                    return;
+                }
+
+                // If the backend indicates payment requires client confirmation (i.e., it returned client_secret)
+                if (initialData.client_secret) {
+                    // Step 3: Confirm the PaymentIntent client-side using the client_secret
+                    const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(initialData.client_secret, {
+                        // NO payment_method here. The PaymentIntent already has it from the first call.
+                        // If 3D Secure is required, Stripe.js will automatically handle the redirect/popup.
+                    });
+
+                    if (confirmError) {
+                        $checkoutMessagesDiv.html(`<div class="alert alert-danger">Payment failed: ${confirmError.message}</div>`);
+                        $placeOrderBtn.prop('disabled', false).text('Place Order');
+                    } else if (paymentIntent.status === 'succeeded') {
+                        // Step 4: Payment succeeded, send payment_intent_id to backend to finalize order
+                        // This re-calls the same API, but now with payment_intent_id
+                        formData.payment_intent_id = paymentIntent.id;
+                        delete formData.payment_method_id; // No longer needed for this final call
+
+                        $placeOrderBtn.text('Finalizing Order...');
+
+                        const finalizeResponse = await fetch('{% url "APIs:api-place-order" %}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                                // NO 'Authorization' header here
+                            },
+                            body: JSON.stringify(formData)
+                        });
+
+                        const finalizeData = await finalizeResponse.json();
+
+                        if (finalizeResponse.ok && finalizeData.success) {
+                            $checkoutMessagesDiv.html(`<div class="alert alert-success">${finalizeData.message}</div>`);
+                            // Redirect to order confirmation page
+                            window.location.href = finalizeData.redirect_url;
+                        } else {
+                            $checkoutMessagesDiv.html(`<div class="alert alert-danger">Order finalization failed: ${finalizeData.error || 'Unknown error'}</div>`);
+                            $placeOrderBtn.prop('disabled', false).text('Place Order');
                         }
-                        alert('Order failed:\n' + errorMessages);
-                        $checkoutForm.removeClass('was-validated');
+                    } else {
+                        // PaymentIntent status is not 'succeeded' but also not an immediate error (e.g., 'requires_action' without action)
+                        $checkoutMessagesDiv.html(`<div class="alert alert-warning">Payment not succeeded: ${paymentIntent.status}. Please try again.</div>`);
+                        $placeOrderBtn.prop('disabled', false).text('Place Order');
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Checkout API error:', status, error, xhr.responseText);
-                    alert('An error occurred during checkout. Please try again.');
-                    $checkoutForm.removeClass('was-validated');
-                },
-                complete: function() {
+                } else if (initialData.success) {
+                    // This branch might be hit if the payment intent was already succeeded on the first call
+                    // (e.g., if there's no 3D Secure or other required action for the payment method).
+                    // In your backend, you've handled this by redirecting immediately.
+                    $checkoutMessagesDiv.html(`<div class="alert alert-success">${initialData.message}</div>`);
+                    window.location.href = initialData.redirect_url;
+                } else {
+                    // Generic error from the initial backend call
+                    $checkoutMessagesDiv.html(`<div class="alert alert-danger">Error: ${initialData.error || 'Unknown error'}</div>`);
                     $placeOrderBtn.prop('disabled', false).text('Place Order');
                 }
-            });
+
+            } catch (error) {
+                console.error('Checkout network or server error:', error);
+                $checkoutMessagesDiv.html(`<div class="alert alert-danger">An unexpected error occurred. Please try again.</div>`);
+                $placeOrderBtn.prop('disabled', false).text('Place Order');
+            }
         });
+
+        // --- Fetch and render cart summary for checkout page (NO AUTH TOKEN) ---
+        var fetchAndRenderCheckoutCartSummary = function() {
+            $checkoutCartSummary.html('<p class="text-center text-muted">Loading cart summary...</p>');
+
+            // Headers for guest cart: Only CSRF token
+            let headers = {
+                'X-CSRFToken': getCookie('csrftoken')
+            };
+
+            $.ajax({
+                url: '{% url "APIs:api-cart-details" %}', // Your cart details API
+                method: 'GET',
+                dataType: 'json',
+                headers: headers, // Only includes CSRF, no Authorization
+                success: function(response) {
+                    let summaryHtml = '';
+                    if (response.cart_items && response.cart_items.length > 0) {
+                        summaryHtml += '<ul class="list-group list-group-flush mb-3">';
+                        let totalAmount = 0;
+                        response.cart_items.forEach(item => {
+                            const current_price = item.product.discounted_price?? item.product.original_price;
+                            const unitPrice = current_price !== undefined && current_price !== null
+                                        ? parseFloat(current_price).toFixed(2) : '0.00';
+                            const itemTotalPrice = item.total_price !== undefined && item.total_price !== null
+                                                    ? parseFloat(item.total_price).toFixed(2) : '0.00';
+                            totalAmount += parseFloat(item.total_price);
+
+                            summaryHtml += `
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="my-0">${item.product.name}</h6>
+                                        <small class="text-muted">Quantity: ${item.quantity} x $${unitPrice}</small>
+                                    </div>
+                                    <span class="text-muted">$${itemTotalPrice}</span>
+                                </li>
+                            `;
+                        });
+                        summaryHtml += '</ul>';
+                        summaryHtml += '<hr>';
+                        summaryHtml += `
+                            <div class="d-flex justify-content-between align-items-center fw-bold fs-5">
+                                <span>Total (USD)</span>
+                                <strong>$${totalAmount.toFixed(2)}</strong>
+                            </div>
+                        `;
+                        $placeOrderBtn.prop('disabled', false);
+                    } else {
+                        summaryHtml = `
+                            <p class="text-center text-muted">Your cart is empty. Please add items to proceed.</p>
+                            <div class="text-center mt-3">
+                                <a href="{% url 'PetStore:home' %}" class="btn btn-info">Continue Shopping</a>
+                            </div>
+                        `;
+                        $placeOrderBtn.prop('disabled', true);
+                    }
+                    $checkoutCartSummary.html(summaryHtml);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching checkout cart summary:', status, error, xhr.responseText);
+                    let errorMessage = 'Failed to load cart summary. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.detail) {
+                        errorMessage = xhr.responseJSON.detail;
+                    }
+                    $checkoutCartSummary.html(`<p class="text-danger text-center">${errorMessage}</p>`);
+                    $placeOrderBtn.prop('disabled', true);
+                }
+            });
+        };
 
         // Initial call to fetch and render cart summary when checkout page loads
         fetchAndRenderCheckoutCartSummary();
+
+        // No need to pre-fill user-specific data if not authenticated, or
+        // only pre-fill if 'user.is_authenticated' is true.
+        // The existing `value="{% if user.is_authenticated %}{{ user.first_name }}{% endif %}"`
+        // will handle this automatically.
     });
 </script>

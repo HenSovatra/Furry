@@ -344,7 +344,7 @@
 
         $.ajax({
             // IMPORTANT: Use Django's URL reversing for robustness
-            url: 'api/cart/', // Correct Django URL for cart details
+            url: '/api/cart/', // Correct Django URL for cart details
             method: 'GET',
             dataType: 'json',
             success: function(response) {

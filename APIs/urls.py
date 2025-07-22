@@ -12,7 +12,11 @@ urlpatterns = [
     path('order/<int:order_id>/', views.order_detail, name='api-order-detail'),
     path('cart/update-quantity/', views.update_cart_item_quantity_api, name='api-update-cart-quantity'),
     path('cart/remove/', views.remove_from_cart_api, name='api-remove-from-cart'),
-    path('placeorder/', views.place_order_api, name='api-place-order'),
+    path('placeorder/', views.place_order_api, name='api-place-order'),    
+    path('register/', views.register_api, name='api-register'),
+    path('login/', views.login_api, name='api-login'),
+    path('logout/', views.logout_api, name='api-logout'),
+    path('order-history/', views.order_history_api, name='order_history_api'),
 ]
 
 
