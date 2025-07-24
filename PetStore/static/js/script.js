@@ -758,6 +758,70 @@
         });
     };
 
+    function loadRecentBlogPosts() {
+        console.log('Loading recent blog posts...'); // Debugging log
+        const container = $('#recent-blog-posts-container');
+        const loadingIndicator = $('#blog-loading-indicator');
+        const noPostsMessage = $('#no-blog-posts-message');
+        const loadError = $('#blog-load-error');
+
+        // Show loading indicator, hide other states
+        loadingIndicator.removeClass('d-none');
+        container.empty(); // Clear any existing content
+        noPostsMessage.addClass('d-none');
+        loadError.addClass('d-none');
+
+        $.ajax({
+            url: `/api/posts/recent/`, // Your API endpoint for recent posts
+            type: 'GET',
+            dataType: 'json', // Expect JSON response
+            success: function(data) {
+                loadingIndicator.addClass('d-none'); // Hide loading indicator
+
+                if (data.length === 0) {
+                    noPostsMessage.removeClass('d-none'); // Show 'no posts' message
+                    return;
+                }
+
+                data.forEach(post => {
+                    // Format the date
+                    const publishedDate = new Date(post.published_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+
+                    // Determine image source
+                    const imageUrl = post.image ? post.image : "{% static 'img/default_blog_image.jpg' %}";
+                    const categoryName = post.category ? post.category.name.toUpperCase() : 'UNCATEGORIZED';
+
+                    const postHtml = `
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <img src="${imageUrl}" class="card-img-top blog-card-img" alt="${post.title}">
+                                <div class="card-body">
+                                    <p class="card-text text-muted text-uppercase text-xxs mb-1">
+                                        ${publishedDate} &bull; ${categoryName}
+                                    </p>
+                                    <h5 class="card-title">${post.title}</h5>
+                                    <p class="card-text text-sm">${post.short_description || 'No description available.'}</p>
+                                    <a href="/blog/${post.id}/" class="text-primary text-sm font-weight-bold">
+                                        Read More <i class="fas fa-arrow-right ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.append(postHtml);
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching recent blog posts:', xhr.responseText);
+                loadingIndicator.addClass('d-none');
+                loadError.removeClass('d-none'); // Show error message
+            }
+        });
+    }
     // Document ready block (all initializations should go here)
     $(document).ready(function() {
         initPreloader();
@@ -772,6 +836,7 @@
         fetchAndRenderProducts();
         initCartItemControls(); 
         loadFeedbackSwiper(); // Load feedback swiper
+        loadRecentBlogPosts()
     });
 
 })(jQuery);

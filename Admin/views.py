@@ -9,7 +9,7 @@ from django.urls import reverse
 import csv
 from django.db import models
 from io import StringIO
-from .models import Product, Customer, Order, Billing
+from .models import *
 from PetStore.models import Product as PetStoreProduct, Category
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
@@ -136,37 +136,46 @@ def dynamic_api_overview(request):
 
 def dynamic_dt_overview(request):
     context = get_base_context(request)
-    context['segment'] = 'dynamic_dt'
-    set_main_item = request.GET.get('main_item', 'product')
+    context['segment'] = 'dynamic_dt' # For active menu highlighting
 
+    # Determine the main item type (product, order, orderitem, etc.)
     main_item = request.GET.get('main_item', 'product').lower()
-    category = request.GET.get('category', 'All')
+    print("Main item is:", main_item) # For debugging
+
+    # Get filtering and pagination parameters from request
+    category = request.GET.get('category', 'All') # For products
     search_query = request.GET.get('search', '')
     page = request.GET.get('page', 1)
+    # Get items per page from session, default to 10
     page_items_count = request.session.get(f'page_items_{main_item}', 10)
 
+    # Get the API path for the selected main item
     api_path = API_ENDPOINTS.get(main_item)
-
     if not api_path:
         return HttpResponse("API endpoint not found for selected item.", status=404)
 
+    # Prepare parameters for the API request
     params = {'page': page, 'page_size': page_items_count}
     if search_query:
         params['search'] = search_query
 
+    # Special filtering for 'product' by category
     if main_item == 'product' and category != 'All':
         try:
             category_obj = Category.objects.get(name__iexact=category)
             params['category'] = category_obj.id
         except Category.DoesNotExist:
+            # If category not found, no category filter is applied
             pass
 
+    # Special filtering for 'order' by status
     if main_item == 'order':
         status_filter = request.GET.get('status', 'All')
-        context['set_status'] = status_filter
+        context['set_status'] = status_filter # Pass status to context for template
         if status_filter != 'All':
             params['status'] = status_filter
 
+    # Apply any saved filters from session (e.g., from a filter form)
     filter_data = request.session.get(f'filters_{main_item}', [])
     for f_data in filter_data:
         key = f_data.get('key')
@@ -174,15 +183,18 @@ def dynamic_dt_overview(request):
         if key and value:
             params[key] = value
 
+    # Construct the full API URL
     api_url = f"{BASE_API_URL}{api_path}"
 
     items = []
     total_count = 0
     try:
+        # Make the API request
         response = requests.get(api_url, params=params)
-        response.raise_for_status()
+        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
         api_data = response.json()
 
+        # Handle paginated (DRF's default) or unpaginated list responses
         if isinstance(api_data, list):
             items = api_data
             total_count = len(api_data)
@@ -191,13 +203,16 @@ def dynamic_dt_overview(request):
             total_count = api_data.get('count', 0)
 
     except requests.exceptions.RequestException as e:
+        # Log the error and return an HTTP error response
         print(f"API Error fetching {main_item} data: {e}")
         return HttpResponse(f"Error fetching data from API: {e}", status=500)
 
+    # Custom Paginator Class to wrap API results in a Django-like Paginator Page object
     class ApiPaginatorPage:
         def __init__(self, data, count, page_num, page_size):
-            self.object_list = data
-            self.number = int(page_num)
+            self.object_list = data # The items for the current page
+            self.number = int(page_num) # Current page number
+            # Create a dummy paginator object with num_pages and count
             self.paginator = type('Paginator', (object,), {
                 'num_pages': (count + page_size - 1) // page_size if page_size > 0 else 1,
                 'count': count
@@ -215,39 +230,75 @@ def dynamic_dt_overview(request):
         def previous_page_number(self):
             return self.number - 1
 
+        # These methods are often used by Django's pagination templates
         def start_index(self):
-            return (self.number - 1) * self.paginator.num_pages + 1
+            # Calculate the starting index of items on the current page
+            if self.paginator.count == 0:
+                return 0
+            return (self.number - 1) * page_items_count + 1
 
         def end_index(self):
+            # Calculate the ending index of items on the current page
             return min(self.number * page_items_count, self.paginator.count)
+
+        def __iter__(self):
+            return iter(self.object_list) # Make it iterable like a QuerySet
 
     paginated_items = ApiPaginatorPage(items, total_count, page, page_items_count)
 
-    page_title = f"{main_item.capitalize()} Management"
+    # Set page title based on the selected item and category
+    page_title = f"{main_item.replace('_', ' ').capitalize()} Management"
     if main_item == 'product' and category != 'All':
-        category_name = Category.objects.filter(id=params.get('category')).first().name if 'category' in params else 'All'
-        page_title = f"{category_name} Products Management"
+        try:
+            # Try to get the category name for the title
+            category_name = Category.objects.filter(id=params.get('category')).first().name
+            page_title = f"{category_name} Products Management"
+        except AttributeError:
+            # Handle case where category_name might be None if category not found
+            pass
     context['page_title'] = page_title
 
+    # Add relevant parameters to context for template use (e.g., dropdown selection)
     context['set_main_item'] = main_item
     context['set_category'] = category
+    context['search_query'] = search_query # Pass search query back to template for input field
 
-    model = apps.get_model('Admin', main_item.capitalize()) if main_item.lower() not in ['product', 'category'] else (PetStoreProduct if main_item.lower() == 'product' else Category)
-    if main_item.lower() == 'orderitem' and not model:
-        model = apps.get_model('PetStore', 'OrderItem')
+    # Determine the actual Django model based on main_item
+    model = None
+    if main_item.lower() == 'product':
+        model = PetStoreProduct
+    elif main_item.lower() == 'category':
+        model = Category
+    elif main_item.lower() == 'order':
+        model = Order
+    elif main_item.lower() == 'orderitem':
+        model = OrderItem
+    else:
+        # Fallback for other potential models in the 'Admin' app
+        try:
+            model = apps.get_model('Admin', main_item.capitalize())
+        except LookupError:
+            return HttpResponse(f"Model '{main_item.capitalize()}' not found.", status=404)
+
 
     if not model:
-        return HttpResponse("Could not determine model for field info.", status=500)
+        return HttpResponse("Could not determine model for field information.", status=500)
 
+    # Get model field information for dynamic table headers and filters
     model_info = get_model_fields(model)
-    context.update(model_info)
+    context.update(model_info) # Adds 'field_headers' and 'db_field_names' to context
 
+    # Add items and pagination object to context
     context['items'] = paginated_items
-    context['db_filters'] = model_info['db_field_names']
-    context['filter_instance'] = filter_data
-    context['page_items'] = page_items_count
-    context['model_name'] = set_main_item
+    context['db_filters'] = model_info['db_field_names'] # For dynamic filtering options
+    context['filter_instance'] = filter_data # Existing filters from session
+    context['page_items'] = page_items_count # Items per page for UI control
+    context['model_name'] = main_item # The lowercase name of the current model
+    context['set_page'] = int(page) # Current page number for pagination UI
+
+    print(f"Items for {main_item}:", [item.get('id') for item in paginated_items.object_list]) # Print IDs for debugging
     return render(request, 'admin_app/dyn_dt/model.html', context)
+
 
 def create_item(request, model_name):
     if request.method == 'POST':

@@ -75,8 +75,9 @@
                         <p class="text-sm"><strong>Status:</strong> {{ item.status }}</p>
                         <p class="text-sm"><strong>Payment Status:</strong> {{ item.payment_status }}</p>
                         <p class="text-sm"><strong>Payment Method:</strong> {{ item.payment_method }}</p>
-
+                        
                         <h6 class="mt-4">Order Items:</h6>
+                        {{ item }} items
                         {% if item.order_items.all %} {# Assuming 'order_items' as related_name #}
                             <div class="table-responsive">
                                 <table class="table table-bordered">

@@ -6,7 +6,22 @@
 
 
 {% include "navbar.html" %}
-
+<style>
+    .blog-card-img {
+        height: 200px; /* Fixed height for blog post images */
+        object-fit: cover; /* Ensures images cover the area without distortion */
+        width: 100%; /* Ensure image takes full width */
+    }
+    .card-text.text-sm {
+        /* Optional: limit description height to prevent cards from stretching too much */
+        height: 4.5em; /* Approx. 3 lines of text for 1.5em line-height */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* Limit to 3 lines */
+        -webkit-box-orient: vertical;
+    }
+</style>
 
 <div class="modal fade" id="productQuickViewModal" tabindex="-1" aria-labelledby="productQuickViewModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -198,8 +213,8 @@
             </div>
 
             <!-- Swiper container (initially hidden) -->
-            <div class="swiper testimonial-swiper d-none" id="feedbackSwiper">
-                <div class="swiper-wrapper" id="swiper-wrapper-content">
+            <div class="swiper testimonial-swiper d-none" id="feedbackSwiper" >
+                <div class="swiper-wrapper" id="swiper-wrapper-content" style="height:500px">
                     <!-- Swiper slides (feedback items) will be injected here by JavaScript -->
                 </div>
                 <!-- Add Pagination -->
@@ -505,82 +520,34 @@
   </section>
 
   <section id="latest-blog" class="section-padding pt-0">
-    <div class="container-lg">
-      <div class="row">
-        <div class="section-header d-flex align-items-center justify-content-between mb-lg-2">
-          <h2 class="section-title">Our recent blog</h2>
-          <a href="#" class="btn btn-primary">View All</a>
-        </div>
+      <div class="container-lg my-5">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="mb-0">Our recent blog</h2>
+          <a href="/blog" class="btn btn-sm btn-outline-primary">View All</a>
       </div>
-      <div class="row">
-        <div class="col-md-4">
-          <article class="post-item card border-1 border-light shadow-sm p-3">
-            <div class="image-holder zoom-effect">
-              <a href="#">
-                <img src="{% static 'images/product-thumbnail-1.jpg' %}" alt="post" class="card-img-top">
-              </a>
-            </div>
-            <div class="card-body">
-              <div class="post-meta d-flex text-uppercase gap-3 my-3 align-items-center">
-                <div class="meta-date"><a href="blog.html" class="text-decoration-none">22 Aug 2021</a></div>
-                <div class="meta-categories"><a href="blog.html" class="text-decoration-none">tips & tricks</a></div>
+
+      <!-- Container for blog posts -->
+      <div class="row" id="recent-blog-posts-container">
+          <!-- Loading indicator -->
+          <div class="col-12 text-center p-5" id="blog-loading-indicator">
+              <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading blog posts...</span>
               </div>
-              <div class="post-header">
-                <h3 class="fs-5 fw-normal">
-                  <a href="#" class="text-decoration-none">Tips for Keeping Your Furry Friend Happy and Healthy</a>
-                </h3>
-                <p>Lorem ipsum dolor sit amet, consectetur adipi elit. Aliquet eleifend viverra enim tincidunt donec
-                  quam...</p>
-              </div>
-            </div>
-          </article>
-        </div>
-        <div class="col-md-4">
-          <article class="post-item card border-1 border-light shadow-sm p-3">
-            <div class="image-holder zoom-effect">
-              <a href="#">
-                <img src="{% static 'images/product-thumbnail-2.jpg' %}" alt="post" class="card-img-top">
-              </a>
-            </div>
-            <div class="card-body">
-              <div class="post-meta d-flex text-uppercase gap-3 my-3 align-items-center">
-                <div class="meta-date"><a href="blog.html" class="text-decoration-none">22 Aug 2021</a></div>
-                <div class="meta-categories"><a href="blog.html" class="text-decoration-none">tips & tricks</a></div>
-              </div>
-              <div class="post-header">
-                <h3 class="fs-5 fw-normal">
-                  <a href="#" class="text-decoration-none">Top 10 Must-Have Pet Products Every Pet Owner Needs</a>
-                </h3>
-                <p>Lorem ipsum dolor sit amet, consectetur adipi elit. Aliquet eleifend viverra enim tincidunt donec
-                  quam...</p>
-              </div>
-            </div>
-          </article>
-        </div>
-        <div class="col-md-4">
-          <article class="post-item card border-1 border-light shadow-sm p-3">
-            <div class="image-holder zoom-effect">
-              <a href="#">
-                <img src="{% static 'images/product-thumbnail-3.jpg' %}" alt="post" class="card-img-top">
-              </a>
-            </div>
-            <div class="card-body">
-              <div class="post-meta d-flex text-uppercase gap-3 my-3 align-items-center">
-                <div class="meta-date"><a href="blog.html" class="text-decoration-none">22 Aug 2021</a></div>
-                <div class="meta-categories"><a href="blog.html" class="text-decoration-none">tips & tricks</a></div>
-              </div>
-              <div class="post-header">
-                <h3 class="fs-5 fw-normal">
-                  <a href="#" class="text-decoration-none">How to Choose the Perfect Pet: A Guide for First-Time Pet Owners</a>
-                </h3>
-                <p>Lorem ipsum dolor sit amet, consectetur adipi elit. Aliquet eleifend viverra enim tincidunt donec
-                  quam...</p>
-              </div>
-            </div>
-          </article>
-        </div>
+              <p class="mt-2">Loading recent blog posts...</p>
+          </div>
+          <!-- Posts will be injected here by jQuery -->
       </div>
-    </div>
+
+      <!-- Message if no posts are found -->
+      <div class="col-12 text-center text-muted p-5 d-none" id="no-blog-posts-message">
+          No recent blog posts found.
+      </div>
+      <!-- Error message if loading fails -->
+      <div class="col-12 alert alert-danger d-none" role="alert" id="blog-load-error">
+          Failed to load blog posts. Please try again later.
+      </div>
+
+  </div>
   </section>
 
   <section class="mt-5 bg-light">

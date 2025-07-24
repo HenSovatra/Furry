@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from rest_framework.routers import DefaultRouter
 from .views import RegisteredCustomerAPIView, get_feedback_api, FeedbackAPIView
+from .views import PostViewSet
 app_name = 'APIs' 
 
 urlpatterns = [
@@ -32,6 +33,6 @@ router.register(r'admin/customers', views.CustomerViewSet)
 router.register(r'admin/orders', views.OrderAdminViewSet)
 router.register(r'admin/billings', views.BillingViewSet)
 router.register(r'admin/categories', views.CategoryViewSet)
-
+router.register(r'posts', PostViewSet)
 # Append the Admin API URLs to the existing urlpatterns
 urlpatterns += router.urls

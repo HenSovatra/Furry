@@ -10,6 +10,8 @@ urlpatterns = [
     path('', views.HomeView, name='home'),
     path('category/', views.CategoryView, name='category'),
     path('history', views.HistoryView, name='history'),
+    path('blog/<int:pk>/', views.PostDetailView, name='blog_detail'), # Updated to use PostDetailView
+    path('blog/', views.PostView, name='blog'),
 
     path('product/<int:pk>/', views.single_product_view, name='single_product'),
     path('product-quick-view/<int:pk>/', views.product_quick_view, name='product_quick_view'), 

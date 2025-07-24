@@ -101,3 +101,17 @@ class FeedbackImageAdmin(admin.ModelAdmin):
     list_display = ('id', 'feedback', 'image', 'uploaded_at')
     list_filter = ('uploaded_at',)
     search_fields = ('feedback__subject', 'feedback__message')
+
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    list_display = ('title', 'category', 'published_date', 'is_published', 'updated_at')
+    list_filter = ('category', 'is_published', 'published_date')
+    search_fields = ('title', 'content', 'short_description', 'author')
+    date_hierarchy = 'published_date'
+    # Use a custom form if you want to explicitly select image or content type
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'short_description', 'content', 'image', 'category', 'author', 'is_published')
+        }),
+    )

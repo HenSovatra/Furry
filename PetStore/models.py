@@ -336,3 +336,23 @@ class FeedbackImage(models.Model):
 
     def __str__(self):
         return f"Image for Feedback #{self.feedback.id}"
+    
+
+class Post(models.Model):
+    title = models.CharField(max_length=200)
+    image = models.ImageField(upload_to='blog_images/', blank=True, null=True)
+    author = models.CharField(max_length=100, default='Admin')
+    content = models.TextField()
+    short_description = models.TextField(blank=True, null=True, help_text="A short summary for display on blog cards.")
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
+    published_date = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_published = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-published_date']
+        verbose_name = "Blog Post"
+        verbose_name_plural = "Blog Posts"
+
+    def __str__(self):
+        return self.title

@@ -1,0 +1,151 @@
+{% load static %}
+
+{% include "navbar.html" %}
+{% include "css.html" %}
+<style>
+    .blog-card-img {
+        height: 200px; /* Fixed height for blog post images */
+        object-fit: cover; /* Ensures images cover the area without distortion */
+        width: 100%; /* Ensure image takes full width */
+    }
+    .card-text.text-sm {
+        /* Optional: limit description height to prevent cards from stretching too much */
+        height: 4.5em; /* Approx. 3 lines of text for 1.5em line-height */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* Limit to 3 lines */
+        -webkit-box-orient: vertical;
+    }
+</style>
+
+<div style="min-height: 70vh;">
+    <div class="d-flex justify-content-between align-items-center mb-4" style="background-color: #76accd; padding: 10px;">
+        <h2 class="mb-0 text-center col-12" >Our recent blog</h2>
+    </div>
+    <section id="latest-blog" class="section-padding pt-0">
+      <div class="container my-5">
+
+
+      <!-- Container for blog posts -->
+      <div class="row" id="recent-blog-posts-container">
+          <!-- Loading indicator -->
+          <div class="col-12 text-center p-5" id="blog-loading-indicator">
+              <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading blog posts...</span>
+              </div>
+              <p class="mt-2">Loading recent blog posts...</p>
+          </div>
+          <!-- Posts will be injected here by jQuery -->
+      </div>
+
+      <!-- Message if no posts are found -->
+      <div class="col-12 text-center text-muted p-5 d-none" id="no-blog-posts-message">
+          No recent blog posts found.
+      </div>
+      <!-- Error message if loading fails -->
+      <div class="col-12 alert alert-danger d-none" role="alert" id="blog-load-error">
+          Failed to load blog posts. Please try again later.
+      </div>
+
+  </div>
+  </section>
+        </div>
+{% include "footer.html" %}
+{% include "scripts.html" %}
+<script>
+    $(document).ready(function() {
+        // Add active class to the current category link
+      
+        
+    });
+    
+    
+       var updateCartCount = function(count) {
+        $('#cart-item-count').text(count);
+        if (count > 0) {
+            $('#cart-item-count').removeClass('d-none'); // Show badge if items exist
+        } else {
+            $('#cart-item-count').addClass('d-none'); // Hide badge if no items
+        }
+    };
+
+    var fetchAndRenderCartDetails = function() {
+        const $cartDialogContent = $('#cart-dialog-content');
+        const $cartDialogTotalPrice = $('#cart-dialog-total-price');
+        const $cartTotalItemsCount = $('.cart-total-items-count'); // Assuming you have an element for this
+        const $cartDialogCheckoutBtn = $('#cart-dialog-checkout-btn'); // Assuming you have a checkout button
+
+        $cartDialogContent.html('<p class="text-center text-muted">Loading cart...</p>'); // Show loading state
+
+        $.ajax({
+            // IMPORTANT: Use Django's URL reversing for robustness
+            url: '/api/cart/', // Correct Django URL for cart details
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                console.log(response); // Keep this for debugging
+
+                let cartHtml = '';
+                if (response.cart_items && response.cart_items.length > 0) {
+                    cartHtml = '<ul class="list-group list-group-flush">';
+                    response.cart_items.forEach(item => {
+                        // Ensure product image URL is correctly accessed (from serializer)
+                        const imageUrl = item.product.image || '/static/images/placeholder.png';
+                        // Ensure current_price is correctly accessed and formatted
+                        console.log(item.product);
+                        const unitPrice = item.product.original_price !== undefined && item.product.original_price !== null
+                                        ? parseInt(item.product.discounted_price??item.product.original_price).toFixed(2) : '0.00';
+                        // Ensure total_price is correctly accessed and formatted
+                        const itemTotalPrice = item.total_price !== undefined && item.total_price !== null
+                                            ? item.total_price.toFixed(2) : '0.00';
+
+                        cartHtml += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center cart-item-row" data-product-id="${item.product.id}">
+                                <div class="d-flex align-items-center">
+                                    <img src="${imageUrl}" alt="${item.product.name}" class="img-thumbnail me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                    <div>
+                                        <h6 class="my-0">${item.product.name}</h6>
+                                        <div class="d-flex align-items-center mt-1">
+                                            <small class="text-muted me-2">Qty:</small>
+                                            <div class="input-group input-group-sm" style="width: 100px;">
+                                                <button class="btn btn-outline-secondary decrement-qty-btn" type="button" data-product-id="${item.product.id}">-</button>
+                                                <input type="text" class="form-control text-center quantity-display" value="${item.quantity}" readonly>
+                                                <button class="btn btn-outline-secondary increment-qty-btn" type="button" data-product-id="${item.product.id}">+</button>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Unit Price: $${unitPrice}</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column align-items-end">
+                                    <span class="fw-bold mb-2">$${itemTotalPrice}</span>
+                                    <button type="button" class="btn btn-danger btn-sm remove-from-cart-btn" data-product-id="${item.product.id}">
+                                        Remove
+                                    </button>
+                                </div>
+                            </li>
+                        `;
+                    });
+                    cartHtml += '</ul>';
+                    $cartDialogCheckoutBtn.removeClass('disabled'); // Enable checkout button
+                } else {
+                    cartHtml = '<p class="text-center text-muted py-5">Your cart is empty.</p>';
+                    $cartDialogCheckoutBtn.addClass('disabled'); // Disable checkout button
+                }
+
+                $cartDialogContent.html(cartHtml);
+                // Ensure total is formatted to 2 decimal places
+                $cartDialogTotalPrice.text(`$${response.total.toFixed(2)}`);
+                updateCartCount(response.total_items); // Update global counter
+                
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching cart details:', status, error, xhr.responseText);
+                $cartDialogContent.html('<p class="text-danger text-center py-5">Failed to load cart. Please try again.</p>');
+                $cartDialogTotalPrice.text(`$0.00`); // Show 0.00 on error
+                updateCartCount(0); // Reset counter on error
+            }
+        });
+    };
+
+</script>

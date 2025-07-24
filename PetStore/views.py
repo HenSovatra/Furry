@@ -39,13 +39,10 @@ def HistoryView(request):
 def FeedbackView(request):
     template_name = 'feedback.html' # This should match your template file name
 
-    form = FeedbackForm() # Initialize the main feedback form
-    # We don't need to pass a formset for rendering the initial page,
-    # as images are handled by a single file input in JS.
+    form = FeedbackForm() 
     context = {
         'form': form,
-        'main_menu_items': navbar(request), # If navbar() is a function you have, include it
-        # Pass CSRF token for AJAX submission directly if needed, though Django templates handle it
+        'main_menu_items': navbar(request),
     }
     return render(request, template_name, context)
 
@@ -58,6 +55,19 @@ def HomeView (request):
         'top_level_categories': top_level_categories,
     }
     return render(request, 'index.html', context) 
+
+def PostView (request):
+    context = {
+        'main_menu_items': navbar(request),
+    }
+    return render(request, 'posts.html', context) 
+
+def PostDetailView (request,pk):
+    context = {
+        'pk': pk,
+        'main_menu_items': navbar(request),
+    }
+    return render(request, 'postdetails.html', context) 
 
 def single_product_view(request, pk):
     product = get_object_or_404(Product, pk=pk, is_active=True)

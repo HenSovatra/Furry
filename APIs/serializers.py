@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from Admin.models import Order, OrderItem 
 from django.db.models import Sum
 # Explicitly import models from PetStore.models with an alias for Product
-from PetStore.models import Product as PetStoreProduct, Category, Cart, CartItem, Order, OrderItem, Feedback, FeedbackImage
+from PetStore.models import Product as PetStoreProduct, Category, Cart, CartItem, Order, OrderItem, Feedback, FeedbackImage, Post
 # Explicitly import models from Admin.models
 from Admin.models import Customer, Billing
 
@@ -20,14 +20,14 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
-        fields = ['product', 'quantity', 'total_price']
+        fields = ['id', 'product', 'quantity', 'total_price']
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
 
     class Meta:
         model = OrderItem
-        fields = ['product', 'quantity', 'price']
+        fields = ['id','product', 'quantity', 'price']
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(source='orderitem_set', many=True)
@@ -132,6 +132,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user # Return the user instance
     
 class OrderItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer()
     class Meta:
         model = OrderItem
         fields = '__all__' # Or specify the fields you need, e.g., ['product', 'quantity', 'price']
@@ -212,3 +213,13 @@ class FeedbackSerializer(serializers.ModelSerializer):
             return obj.user.username # If a user is linked, show their username
         return obj.email or 'Anonymous'
 
+class PostSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True) # This nests the category details
+
+    class Meta:
+        model = Post
+        fields = [
+            'id', 'title', 'image', 'author', 'content',
+            'short_description', 'category', 'published_date', 'updated_at',
+            'is_published'
+        ]

@@ -20,7 +20,7 @@ import logging
 from decimal import Decimal
 from django.contrib.auth.models import User
 from rest_framework import generics
-
+from rest_framework.decorators import action
 from django.views import View
 from .serializers import RegisteredCustomerSerializer
 from rest_framework.permissions import AllowAny
@@ -67,6 +67,7 @@ def get_or_create_cart(request):
 def product_list(request):
     products = Product.objects.filter(is_active=True).order_by('-created_at') # Changed to PetStoreProduct
     serializer = ProductSerializer(products, many=True)
+    print(serializer.data)  # Debugging line to check serialized data
     return Response(serializer.data)
 
 @api_view(['GET'])
@@ -633,3 +634,17 @@ def get_feedback_api(request):
     serializer = FeedbackSerializer(feedback_queryset, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+class PostViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Post.objects.filter(is_published=True).order_by('-published_date')
+    serializer_class = PostSerializer
+    lookup_field = 'pk' # Use 'pk' for ID-based lookup (this is the default, but explicit is fine)
+
+    @action(detail=False, methods=['get'])
+    def recent(self, request):
+        """
+        Returns the most recent blog posts (e.g., for "Our recent blog" section).
+        """
+        recent_posts = self.get_queryset()[:3]
+        serializer = self.get_serializer(recent_posts, many=True)
+        return Response(serializer.data)
