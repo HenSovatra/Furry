@@ -14,6 +14,8 @@ from PetStore.models import Product as PetStoreProduct, Category
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from urllib.parse import urlparse, parse_qs, quote
+from django.contrib.admin.views.decorators import staff_member_required
+
 
 BASE_API_URL = "http://127.0.0.1:8000/api/"
 
@@ -75,7 +77,7 @@ def get_model_fields(model):
         'email_fields': email_fields,
         'text_fields': text_fields,
     }
-
+@staff_member_required
 def get_base_context(request, model_name=None):
     context = {}
     path_segments = request.path.strip('/').split('/')
@@ -97,7 +99,7 @@ def get_base_context(request, model_name=None):
     }
     context['model_map'] = model_map_for_context
     return context
-
+@staff_member_required
 def dashboard(request):
     context = get_base_context(request)
     context['segment'] = 'dashboard'
@@ -115,7 +117,7 @@ def dashboard(request):
         'total_revenue': total_revenue,
     })
     return render(request, 'admin_app/index.html', context)
-
+@staff_member_required
 def dynamic_api_overview(request):
     context = get_base_context(request)
     context['segment'] = 'dynamic_api'
@@ -125,15 +127,16 @@ def dynamic_api_overview(request):
         'product': PetStoreProduct,
         'customer': Customer,
         'order': Order,
-        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
+        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('APIs') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('APIs').get_models()] else None,
         'billing': Billing,
     }
 
     available_routes = [name for name, model_cls in managed_models.items() if model_cls is not None]
 
     context['routes'] = available_routes
-    return render(request, 'admin_app/dyn_dt/index.html', context)
+    return render(request, 'admin_app/dyn_api/index.html', context)
 
+@staff_member_required
 def dynamic_dt_overview(request):
     context = get_base_context(request)
     context['segment'] = 'dynamic_dt' # For active menu highlighting
@@ -299,7 +302,7 @@ def dynamic_dt_overview(request):
     print(f"Items for {main_item}:", [item.get('id') for item in paginated_items.object_list]) # Print IDs for debugging
     return render(request, 'admin_app/dyn_dt/model.html', context)
 
-
+@staff_member_required
 def create_item(request, model_name):
     if request.method == 'POST':
         api_path = API_ENDPOINTS.get(model_name)
@@ -419,7 +422,7 @@ def create_item(request, model_name):
     else:
         return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={model_name}")
 
-
+@staff_member_required
 def update_item(request, model_name, item_id):
     if request.method == 'POST':
         print(f"RAW request.POST at start of update_item: {request.POST}")
@@ -558,7 +561,7 @@ def update_item(request, model_name, item_id):
     else:
         return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={model_name}")
 
-
+@staff_member_required
 def delete_item(request, model_name, item_id):
     api_path = API_ENDPOINTS.get(model_name)
     if not api_path:
@@ -588,7 +591,7 @@ def delete_item(request, model_name, item_id):
     else:
         return HttpResponse("Invalid request method.", status=405)
 
-
+@staff_member_required
 def export_csv_view(request, link):
     model_name = link.lower()
 
@@ -635,7 +638,7 @@ def export_csv_view(request, link):
         writer.writerow(row)
     return response
 
-
+@staff_member_required
 def create_hide_show_items_view(request, link):
     if request.method == 'POST':
         try:
@@ -659,7 +662,7 @@ def create_hide_show_items_view(request, link):
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
-
+@staff_member_required
 def create_page_items_view(request, link):
     if request.method == 'POST':
         items_per_page = request.POST.get('items')
@@ -671,7 +674,7 @@ def create_page_items_view(request, link):
         except ValueError:
             return JsonResponse({'status': 'error', 'message': 'Invalid items per page value'}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
-
+@staff_member_required
 def create_filter_view(request, link):
     if request.method == 'POST':
         filter_data = []
@@ -695,7 +698,7 @@ def create_filter_view(request, link):
 
         return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={main_item}&category={category}")
     return HttpResponse("Invalid request method for create filter.", status=405)
-
+@staff_member_required
 def delete_filter_view(request, link, filter_id):
     filter_id = int(filter_id)
     session_key = f'filters_{link}'
@@ -712,7 +715,7 @@ def delete_filter_view(request, link, filter_id):
         main_item = query_params.get('main_item', [link])[0]
         category = query_params.get('category', ['All'])[0]
     return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={main_item}&category={category}")
-
+@staff_member_required
 def model_api(request, model_name):
     try:
         model = apps.get_model('Admin', model_name.capitalize())
@@ -732,7 +735,7 @@ def model_api(request, model_name):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
-
+@staff_member_required
 def charts(request):
     context = get_base_context(request)
     context['segment'] = 'charts'
@@ -752,7 +755,7 @@ def charts(request):
     context['sales_data_json'] = json.dumps(sales_data)
 
     return render(request, 'admin_app/charts/index.html', context)
-
+@staff_member_required
 def billing(request):
     context = get_base_context(request)
     context['segment'] = 'billing'
@@ -761,7 +764,7 @@ def billing(request):
     invoices = Billing.objects.all().select_related('customer').order_by('-issue_date')
     context['invoices'] = invoices
     return render(request, 'admin_app/billing/index.html', context)
-
+@staff_member_required
 def user_management(request):
     context = get_base_context(request)
     context['segment'] = 'user_management'

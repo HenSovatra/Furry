@@ -25,4 +25,5 @@ urlpatterns = [
     path('export-csv/<str:link>/', views.export_csv_view, name='export_csv'),
     
     path('dynamic-api/<str:model_name>/', views.model_api, name='model_api'),
+    path('dynamic-api-overview/', views.dynamic_api_overview, name='model_api_item'),
 ]

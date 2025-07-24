@@ -237,7 +237,7 @@
     </div>
   </section>
   
-  <section class="new-arrivals section-padding">
+  <section class="new-arrivals section-padding" style="height:700px">
     <div class="container-lg position-relative">
       <div class="section-header d-flex flex-wrap justify-content-between pb-2">
         <h2 class="section-title">New arrivals</h2>
@@ -247,234 +247,12 @@
       </div>
 
       <div class="swiper product-swiper">
-        <div class="swiper-wrapper">
-          <div class="swiper-slide">
+        <div class="swiper-wrapper" id="product-order-by-date">
+        <div class="swiper-slide">
             <div class="product-item mb-4">
               <figure>
                 <a href="single-product.html" title="Product Title">
                   <img src="{% static 'images/product-thumbnail-2.jpg' %}" alt="Product Thumbnail" class="tab-image img-fluid rounded-3">
-                </a>
-              </figure>
-              <div class="d-flex flex-column text-center">
-                <h3 class="fs-5 fw-normal"><a href="single-product.html" class="text-decoration-none">Product Item</a></h3>
-                <div class="d-flex justify-content-center align-items-center gap-2">
-                  <del>$24.00</del>
-                  <span class="text-dark fw-semibold">$18.00</span>
-                </div>
-                <div class="button-area p-3">
-                  <div class="justify-content-center d-flex mb-3">
-                    <div class="input-group product-qty">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="">
-                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
-                          </button>
-                      </span>
-                      <input type="text" id="quantity" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="100">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="">
-                              <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
-                          </button>
-                      </span>
-                    </div>
-                  </div>
-                  <div><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18">
-                      <use xlink:href="#cart"></use>
-                    </svg> Add to Cart</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="product-item mb-4">
-              <figure>
-                <a href="single-product.html" title="Product Title">
-                  <img src="{% static 'images/product-thumbnail-1.jpg' %}" alt="Product Thumbnail" class="tab-image img-fluid rounded-3">
-                </a>
-              </figure>
-              <div class="d-flex flex-column text-center">
-                <h3 class="fs-5 fw-normal"><a href="single-product.html" class="text-decoration-none">Product Item</a></h3>
-                <div class="d-flex justify-content-center align-items-center gap-2">
-                  <del>$24.00</del>
-                  <span class="text-dark fw-semibold">$18.00</span>
-                </div>
-                <div class="button-area p-3">
-                  <div class="justify-content-center d-flex mb-3">
-                    <div class="input-group product-qty">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="">
-                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
-                          </button>
-                      </span>
-                      <input type="text" id="quantity" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="100">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="">
-                              <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
-                          </button>
-                      </span>
-                    </div>
-                  </div>
-                  <div><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18">
-                      <use xlink:href="#cart"></use>
-                    </svg> Add to Cart</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="product-item mb-4">
-              <figure>
-                <a href="single-product.html" title="Product Title">
-                  <img src="{% static 'images/product-thumbnail-5.jpg' %}" alt="Product Thumbnail" class="tab-image img-fluid rounded-3">
-                </a>
-              </figure>
-              <div class="d-flex flex-column text-center">
-                <h3 class="fs-5 fw-normal"><a href="single-product.html" class="text-decoration-none">Product Item</a></h3>
-                <div class="d-flex justify-content-center align-items-center gap-2">
-                  <del>$24.00</del>
-                  <span class="text-dark fw-semibold">$18.00</span>
-                </div>
-                <div class="button-area p-3">
-                  <div class="justify-content-center d-flex mb-3">
-                    <div class="input-group product-qty">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="">
-                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
-                          </button>
-                      </span>
-                      <input type="text" id="quantity" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="100">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="">
-                              <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
-                          </button>
-                      </span>
-                    </div>
-                  </div>
-                  <div><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18">
-                      <use xlink:href="#cart"></use>
-                    </svg> Add to Cart</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="product-item mb-4">
-              <figure>
-                <a href="single-product.html" title="Product Title">
-                  <img src="{% static 'images/product-thumbnail-3.jpg' %}" alt="Product Thumbnail" class="tab-image img-fluid rounded-3">
-                </a>
-              </figure>
-              <div class="d-flex flex-column text-center">
-                <h3 class="fs-5 fw-normal"><a href="single-product.html" class="text-decoration-none">Product Item</a></h3>
-                <div class="d-flex justify-content-center align-items-center gap-2">
-                  <del>$24.00</del>
-                  <span class="text-dark fw-semibold">$18.00</span>
-                </div>
-                <div class="button-area p-3">
-                  <div class="justify-content-center d-flex mb-3">
-                    <div class="input-group product-qty">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="">
-                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
-                          </button>
-                      </span>
-                      <input type="text" id="quantity" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="100">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="">
-                              <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
-                          </button>
-                      </span>
-                    </div>
-                  </div>
-                  <div><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18">
-                      <use xlink:href="#cart"></use>
-                    </svg> Add to Cart</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="product-item mb-4">
-              <figure>
-                <a href="single-product.html" title="Product Title">
-                  <img src="{% static 'images/product-thumbnail-4.jpg' %}" alt="Product Thumbnail" class="tab-image img-fluid rounded-3">
-                </a>
-              </figure>
-              <div class="d-flex flex-column text-center">
-                <h3 class="fs-5 fw-normal"><a href="single-product.html" class="text-decoration-none">Product Item</a></h3>
-                <div class="d-flex justify-content-center align-items-center gap-2">
-                  <del>$24.00</del>
-                  <span class="text-dark fw-semibold">$18.00</span>
-                </div>
-                <div class="button-area p-3">
-                  <div class="justify-content-center d-flex mb-3">
-                    <div class="input-group product-qty">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="">
-                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
-                          </button>
-                      </span>
-                      <input type="text" id="quantity" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="100">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="">
-                              <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
-                          </button>
-                      </span>
-                    </div>
-                  </div>
-                  <div><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18">
-                      <use xlink:href="#cart"></use>
-                    </svg> Add to Cart</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="product-item mb-4">
-              <figure>
-                <a href="single-product.html" title="Product Title">
-                  <img src="{% static 'images/product-thumbnail-9.jpg' %}" alt="Product Thumbnail" class="tab-image img-fluid rounded-3">
-                </a>
-              </figure>
-              <div class="d-flex flex-column text-center">
-                <h3 class="fs-5 fw-normal"><a href="single-product.html" class="text-decoration-none">Product Item</a></h3>
-                <div class="d-flex justify-content-center align-items-center gap-2">
-                  <del>$24.00</del>
-                  <span class="text-dark fw-semibold">$18.00</span>
-                </div>
-                <div class="button-area p-3">
-                  <div class="justify-content-center d-flex mb-3">
-                    <div class="input-group product-qty">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="">
-                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
-                          </button>
-                      </span>
-                      <input type="text" id="quantity" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="100">
-                      <span class="input-group-btn">
-                          <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="">
-                              <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
-                          </button>
-                      </span>
-                    </div>
-                  </div>
-                  <div><a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart"><svg width="18" height="18">
-                      <use xlink:href="#cart"></use>
-                    </svg> Add to Cart</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="product-item mb-4">
-              <figure>
-                <a href="single-product.html" title="Product Title">
-                  <img src="{% static 'images/product-thumbnail-10.jpg' %}" alt="Product Thumbnail" class="tab-image img-fluid rounded-3">
                 </a>
               </figure>
               <div class="d-flex flex-column text-center">
@@ -550,31 +328,7 @@
   </div>
   </section>
 
-  <section class="mt-5 bg-light">
-    <div class="container">
-      <div class="row justify-content-center align-items-center">
-        <div class="col-md-5">
-          <h2 class="fw-bold fs-1 mt-5">Get <span class="text-primary">25% Discount</span> on your first purchase</h2>
-          <p>Just Sign Up & Register it now to become member.</p>
-          <form>
-            <div class="mb-3">
-              <label for="email" class="form-label d-none">Email</label>
-              <input type="email" class="form-control form-control-lg" name="email" id="email" placeholder="Email"
-                required>
-            </div>
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-dark btn-lg">Subscribe</button>
-            </div>
-          </form>
-        </div>
-        <div class="col-md-7">
-          <img src="{% static 'images/banner-dog.png' %}" alt="image" class="img-fluid">
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section-padding">
+  <section class="section-padding" style="padding-top: 0;">
     <div class="container">
       <div class="row justify-content-center align-items-center">
           <div class="col-md-3">

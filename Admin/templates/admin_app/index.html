@@ -7,7 +7,6 @@
 {% block breadcrumb_title %}Dashboard{% endblock breadcrumb_title %}
 
 {% block content %}
-
 <div class="row">
   <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
     <div class="card">
@@ -31,7 +30,7 @@
             <div
               class="icon icon-shape bg-gradient-primary shadow-primary text-center rounded-circle"
             >
-              <i class="ni ni-box-2 text-lg opacity-10" aria-hidden="true"></i>
+              <i class="bi bi-archive"></i>
             </div>
           </div>
         </div>
@@ -58,10 +57,7 @@
             <div
               class="icon icon-shape bg-gradient-danger shadow-danger text-center rounded-circle"
             >
-              <i
-                class="ni ni-single-02 text-lg opacity-10"
-                aria-hidden="true"
-              ></i>
+            <i class="bi bi-person-check"></i>
             </div>
           </div>
         </div>
@@ -88,7 +84,7 @@
             <div
               class="icon icon-shape bg-gradient-success shadow-success text-center rounded-circle"
             >
-              <i class="ni ni-cart text-lg opacity-10" aria-hidden="true"></i>
+             <i class="bi bi-receipt"></i>
             </div>
           </div>
         </div>
@@ -102,25 +98,37 @@
           <div class="col-8">
             <div class="numbers">
               <p class="text-sm mb-0 text-uppercase font-weight-bold">
-                Total Revenue
+                  Total Revenue
               </p>
               <h5 class="font-weight-bolder">
-                ${{ total_revenue|floatformat:2 }}
+                  ${{ stripe_revenue_today|floatformat:2 }}
               </h5>
               <p class="mb-0">
-                <span class="text-success text-sm font-weight-bolder">+5%</span>
-                than last month
+                  {# Conditional display for percentage change based on 'is_revenue_increase' #}
+                  {% if stripe_revenue_yesterday is not none %} {# Ensure yesterday's data was fetched #}
+                      {% if revenue_percentage_change > 0 %} {# If there's an actual change (not 0%) #}
+                          {% if is_revenue_increase %}
+                              <span class="text-success text-sm font-weight-bolder">+{{ revenue_percentage_change|floatformat:2 }}%</span>
+                          {% else %}
+                              <span class="text-danger text-sm font-weight-bolder">-{{ revenue_percentage_change|floatformat:2 }}%</span>
+                          {% endif %}
+                      {% elif stripe_revenue_today == 0 and stripe_revenue_yesterday > 0 %} {# Special case: Today 0, Yesterday > 0 (100% decrease) #}
+                          <span class="text-danger text-sm font-weight-bolder">-100.00%</span>
+                      {% elif stripe_revenue_today > 0 and stripe_revenue_yesterday == 0 %} {# Special case: Today > 0, Yesterday 0 (infinite increase) #}
+                          <span class="text-success text-sm font-weight-bolder">+Infinite%</span>
+                      {% else %} {# Both today and yesterday are 0, or revenue_percentage_change is exactly 0 #}
+                          <span class="text-muted text-sm font-weight-bolder">0.00%</span>
+                      {% endif %}
+                  {% endif %}
+                  than yesterday 
               </p>
-            </div>
+          </div>
           </div>
           <div class="col-4 text-end">
             <div
               class="icon icon-shape bg-gradient-warning shadow-warning text-center rounded-circle"
             >
-              <i
-                class="ni ni-money-coins text-lg opacity-10"
-                aria-hidden="true"
-              ></i>
+             <i class="bi bi-currency-dollar"></i>
             </div>
           </div>
         </div>

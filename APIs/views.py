@@ -27,8 +27,9 @@ from rest_framework.permissions import AllowAny
 from PetStore.forms import FeedbackForm,FeedbackImageFormSet
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch
-
+from django.db.models import Sum, F
 from django.http import JsonResponse
+from .decorators import track_api_usage
 
 logger = logging.getLogger(__name__) # Initialize logger for this module
 
@@ -64,11 +65,23 @@ def get_or_create_cart(request):
 
 # --- Teammate's Existing API Views (UPDATED to use PetStoreProduct) ---
 @api_view(['GET'])
+@track_api_usage
 def product_list(request):
-    products = Product.objects.filter(is_active=True).order_by('-created_at') # Changed to PetStoreProduct
-    serializer = ProductSerializer(products, many=True)
-    print(serializer.data)  # Debugging line to check serialized data
+    products = Product.objects.filter(is_active=True).annotate(
+        # Calculate total_sold by summing quantities from related OrderItems
+        total_sold=Sum('orderitem__quantity')
+    ).order_by(F('total_sold').desc(nulls_last=True)) # Order by total_sold descending, nulls (no sales) last
+
+    serializer = ProductSerializer(products, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def products_by_createdate(request):
+        products = Product.objects.filter(is_active=True).order_by('-created_at')
+        serializer = ProductSerializer(products, many=True, context={'request': request})
+        return Response(serializer.data)
+
 
 @api_view(['GET'])
 def product_detail(request, pk):
@@ -213,7 +226,7 @@ def place_order_api(request):
 
     if not cart.items.exists():
         return Response({'error': 'Your cart is empty. Please add items before placing an order.'},
-                         status=status.HTTP_400_BAD_REQUEST)
+                        status=status.HTTP_400_BAD_REQUEST)
 
     data = request.data
     payment_method_id = data.get('payment_method_id') # For the first call to create PI
@@ -221,8 +234,10 @@ def place_order_api(request):
 
     # For guest users, the email is mandatory as it's their identifier for the order
     email = data.get('email')
-    if not email:
+    if not request.user.is_authenticated and not email: # Only require email for guests
         return Response({'error': 'Email is required for guest checkout.'}, status=status.HTTP_400_BAD_REQUEST)
+    elif request.user.is_authenticated:
+        email = request.user.email # Use logged-in user's email
 
     # Validate required checkout fields (basic check)
     required_fields = ['first_name', 'last_name', 'email', 'address_line_1', 'city', 'state', 'zip_code', 'country']
@@ -237,10 +252,11 @@ def place_order_api(request):
         # unless item.total_price is dynamically calculated on item.save() based on current product prices.
         # It's safer to recalculate from Product model here.
         for item in cart.items.all():
-            if item.product.discounted_price is not None:
-                product_price = item.product.discounted_price
+            product = item.product # Get the actual product object
+            if product.discounted_price is not None:
+                product_price = product.discounted_price
             else:
-                product_price = item.product.original_price
+                product_price = product.original_price
             if not isinstance(product_price, Decimal):
                 product_price = Decimal(str(product_price)) # Ensure Decimal for calculations
             final_total_amount += product_price * item.quantity
@@ -263,7 +279,7 @@ def place_order_api(request):
 
 
     try:
-        with transaction.atomic():
+        with transaction.atomic(): # Ensures that if any part fails, everything is rolled back
             order = None # Initialize order to None
 
             # --- Payment Intent Confirmation Flow (Second call from frontend) ---
@@ -276,7 +292,7 @@ def place_order_api(request):
                     if existing_order:
                         logger.info(f"Duplicate call for PI {payment_intent_id}. Order {existing_order.id} already exists.")
                         my_return_url = f'{settings.BASE_URL}/order-confirmation/{existing_order.id}'
-                        print(f"DEBUG: Attempting to create PaymentIntent with return_url: {my_return_url}") # <--- ADD THIS LINE
+                        print(f"DEBUG: Returning existing order with redirect_url: {my_return_url}")
                         return Response({
                             'success': True,
                             'message': 'Order already processed successfully!',
@@ -322,40 +338,60 @@ def place_order_api(request):
                         if request.user.is_authenticated:
                             order_data['user'] = request.user
                         else:
-                            # For guest users, store the session key
-                            # Ensure the session has been saved/created for the key to exist
                             if request.session.session_key:
                                 order_data['session_key'] = request.session.session_key
                             else:
-                                # This should ideally not happen if get_or_create_cart is working,
-                                # but as a fallback, ensure session is saved
-                                request.session.save()
+                                request.session.save() # Ensure session is saved to get a session_key
                                 order_data['session_key'] = request.session.session_key
 
                         order = Order.objects.create(**order_data)
-                        price = item.product.discounted_price if item.product.discounted_price is not None else item.product.original_price
+
+                        # Create OrderItems and deduct stock
                         for item in cart.items.all():
+                            product = item.product # Get the associated product
+                            
+                            # Determine the price to store in OrderItem
+                            price_to_store = product.discounted_price if product.discounted_price is not None else product.original_price
+
+                            # Create OrderItem
                             OrderItem.objects.create(
                                 order=order,
-                                product=item.product,
+                                product=product,
                                 quantity=item.quantity,
-                                price= price, # Use product's current price at order time for OrderItem
-                                total_price=item.quantity * price
+                                price=price_to_store, # Use product's current price at order time for OrderItem
+                                # Assuming OrderItem also has a total_price field like CartItem
+                                total_price=item.quantity * price_to_store
                             )
 
+                            # --- STOCK DEDUCTION LOGIC ---
+                            if product.stock >= item.quantity:
+                                product.stock -= item.quantity
+                                product.save()
+                                logger.info(f"Deducted {item.quantity} from product {product.name}. New stock: {product.stock}")
+                            else:
+                                # This scenario should ideally be caught by the cart validation earlier,
+                                # but it's a good fail-safe to log and potentially raise an error
+                                # if stock wasn't sufficient at the time of order processing.
+                                logger.error(f"Insufficient stock for product {product.name} (ID: {product.id}) during order {order.id} creation. Expected {item.quantity}, but only {product.stock} available.")
+                                # You might want to raise an exception here to rollback the transaction
+                                # raise ValueError(f"Insufficient stock for {product.name}.")
+
+
                         cart.items.all().delete() # Clear the cart items
-                        # If you want to delete the cart itself if it's empty, you could do:
-                        # if not cart.items.exists():
-                        #     cart.delete()
+                        # Optionally, delete the cart itself if it's an anonymous cart and empty
+                        if not cart.items.exists() and not request.user.is_authenticated:
+                            cart.delete()
 
                         # Send order confirmation email
                         subject = 'Your PetStore Order Confirmation'
                         recipient_email = order.email
                         html_message = render_to_string('email/order_confirmation_email.html', {'order': order, 'user': order.user if order.user else None})
                         plain_message = f'Thank you for your order, {order.first_name}! Your order ID is {order.id}.'
-                        send_mail(subject, plain_message, settings.EMAIL_HOST_USER, [recipient_email], html_message=html_message)
+                        # Use from_email setting for the sender
+                        send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [recipient_email], html_message=html_message)
+
                         my_return_url = f'{settings.BASE_URL}/order-confirmation/{order.id}'
-                        print(f"DEBUG: Attempting to create PaymentIntent with return_url: {my_return_url}") # <--- ADD THIS LINE
+                        print(f"DEBUG: Order {order.id} placed successfully. Redirect URL: {my_return_url}")
 
                         return Response({
                             'success': True,
@@ -364,6 +400,7 @@ def place_order_api(request):
                             'redirect_url': my_return_url
                         }, status=status.HTTP_200_OK)
                     else:
+                        # Payment intent status is not 'succeeded'
                         return Response({
                             'error': f'Payment not successful. Status: {payment_intent.status}. Please try again or use another payment method.',
                             'payment_intent_status': payment_intent.status
@@ -380,12 +417,15 @@ def place_order_api(request):
             # --- Payment Intent Creation Flow (First call from frontend) ---
             elif payment_method_id:
                 try:
+                    # Removed 'confirm=True' here as per Stripe best practices for client-side confirmation.
+                    # 'confirmation_method="automatic"' means Stripe will handle 3DS flows and redirect if needed.
+                    
                     intent = stripe.PaymentIntent.create(
                         amount=total_amount_cents,
                         currency='usd',
                         payment_method=payment_method_id,
-                        confirmation_method='automatic', # <--- **FIXED THIS LINE**
-                        confirm=True, # <--- REMOVE THIS LINE
+                        confirm=True, # Confirm the payment intent immediately
+                        confirmation_method='automatic', # Corrected: Use automatic confirmation
                         return_url=f'{settings.BASE_URL}/order-confirmation/', # Crucial for 3DS! e.g., 'http://localhost:8000/checkout-success/'
                         metadata={
                             'cart_id': str(cart.id), # Metadata values must be strings
@@ -411,6 +451,7 @@ def place_order_api(request):
                     return Response({
                         'success': True, # Indicate that creation was successful and client needs to confirm
                         'client_secret': intent.client_secret,
+                        'payment_intent_id': intent.id, # Also send the PI ID back for the second call
                         'message': 'Payment Intent created successfully, awaiting client confirmation.'
                     }, status=status.HTTP_200_OK)
 
@@ -453,22 +494,46 @@ def register_api(request):
 @permission_classes([AllowAny])
 @csrf_protect
 def login_api(request):
+    print("DEBUG: Login API called with data:", request.data)  # Debugging line to check incoming data
     username = request.data.get('username')
     password = request.data.get('password')
 
     user = authenticate(request, username=username, password=password)
-
     if user is not None:
+        # Log the user in for session-based authentication (if your site uses it, e.g., for Django Admin)
         login(request, user)
+
+        # Get or create the DRF authentication token
         token, created = Token.objects.get_or_create(user=user)
+
+        # --- Redirection Logic based on is_staff ---
+        redirect_url = ''
+        message = ''
+        if user.is_staff:
+            # If the user is staff, redirect them to a dashboard URL
+            # Example: Assuming '/dashboard/' is your staff dashboard URL
+            # If using named URLs: redirect_url = reverse('dashboard')
+            redirect_url = '/my-admin/' # Replace with your actual dashboard URL
+            message = 'Login successful. Welcome to the dashboard!'
+        else:
+            # If the user is not staff, redirect them to the home page
+            # Example: Assuming '/' is your home page URL
+            # If using named URLs: redirect_url = reverse('home')
+            redirect_url = '/' # Replace with your actual home page URL
+            message = 'Login successful. Welcome back!'
+
         return Response({
             'success': True,
-            'message': 'Login successful.',
+            'message': message,
             'username': user.username,
             'token': token.key,
+            'is_staff': user.is_staff, # Include this flag for clarity on the frontend
+            'redirect_url': redirect_url, # The URL for the frontend to navigate to
         }, status=status.HTTP_200_OK)
     else:
-        return Response({'success': False, 'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+        # Authentication failed
+        return Response({'success': False, 'error': 'Invalid username or password.'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -558,7 +623,6 @@ def products_by_category_api(request, category_id):
         for product in products.distinct(): # Use distinct() if you combined querysets
             price = 0
             image_url = request.build_absolute_uri(product.image.url) if product.image else ''
-            print(image_url)
             if product.discounted_price is not None:
                 price = product.discounted_price
             else:
@@ -636,15 +700,18 @@ def get_feedback_api(request):
 
 
 class PostViewSet(viewsets.ReadOnlyModelViewSet):
+    # The default queryset for list and retrieve actions (which already orders by published_date)
     queryset = Post.objects.filter(is_published=True).order_by('-published_date')
     serializer_class = PostSerializer
-    lookup_field = 'pk' # Use 'pk' for ID-based lookup (this is the default, but explicit is fine)
+    lookup_field = 'pk' # Use 'pk' for ID-based lookup
 
     @action(detail=False, methods=['get'])
     def recent(self, request):
         """
-        Returns the most recent blog posts (e.g., for "Our recent blog" section).
+        Returns ALL published blog posts, ordered by recent date.
+        This action will no longer limit to 3 posts.
         """
-        recent_posts = self.get_queryset()[:3]
-        serializer = self.get_serializer(recent_posts, many=True)
+        # Get all posts from the default queryset (which is already filtered by is_published and ordered)
+        all_recent_posts = self.get_queryset()
+        serializer = self.get_serializer(all_recent_posts, many=True)
         return Response(serializer.data)
