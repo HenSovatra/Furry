@@ -70,21 +70,21 @@
                     <div class="d-flex align-items-center gap-2">
                         {# Ensure 'model_name' is passed to the template context. E.g., from views.py: context['model_name'] = 'product' #}
                         <a href="#" class="text-secondary font-weight-bold text-xs edit-btn"
-                                        data-item-id="{{ item.id }}"
-                                        data-model-name="{{ model_name }}"
-                                        data-update-url="{% url 'Admin:update' model_name item.id %}"
-                                        data-bs-toggle="modal"                          {# ADD THIS LINE #}
-                                        data-bs-target="#editSales-{{item.id}}"         {# ADD THIS LINE (adjust ID if different) #}
-                                        data-bs-original-title="Edit Product">         {# Keep this if you want the tooltip #}
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                        <a href="#" class="text-danger font-weight-bold text-xs delete-btn"
-                           data-item-id="{{ item.id }}"
-                           data-model-name="{{ model_name }}"
-                           data-delete-url="{% url 'Admin:delete' model_name item.id %}" {# ADDED THIS LINE #}
-                           data-bs-toggle="tooltip" data-bs-original-title="Delete Product">
-                            <i class="fas fa-trash-alt"></i> Delete
-                        </a>
+                                data-item-id="{{ item.id }}"
+                                data-model-name="{{ model_info.model_name }}"  {# Corrected #}
+                                data-update-url="{% url 'Admin:update' model_name item.id %}"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editSales-{{item.id}}"
+                                data-bs-original-title="Edit Product">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="#" class="text-danger font-weight-bold text-xs delete-btn"
+                                data-item-id=\"{{ item.id }}\"
+                                data-model-name="{{ model_info.model_name }}" {# Corrected #}
+                                data-delete-url="{% url 'Admin:delete' model_name item.id %}"
+                                data-bs-toggle="tooltip" data-bs-original-title="Delete Product">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </a>
                     </div>
                 </td>
             </tr>

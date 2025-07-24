@@ -1,0 +1,62 @@
+{% load static get_attribute %}
+
+<table class="table align-items-center mb-0">
+  <thead>
+    <tr>
+      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+        Customer
+      </th>
+      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+        Email
+      </th>
+      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+        Registered
+      </th>
+      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+        Billing Address
+      </th>
+      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+        Products Bought
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items.object_list %}
+    <tr class="table-row">
+      <td>
+        <div class="d-flex px-2 py-1">
+          <div class="d-flex flex-column justify-content-center">
+            <h6 class="mb-0 text-sm">
+  {{ item.username }} {# Directly display the username from the API #}
+</h6>
+            <p class="text-xs text-secondary mb-0">ID: {{ item.id }}</p>
+          </div>
+        </div>
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">{{ item.email }}</p>
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">{{ item.registration_date }}</p>
+      </td>
+      <td>
+        {% if item.billing_address %}
+        <p class="text-xs mb-0">
+          {{ item.billing_address.line1 }},
+          {{ item.billing_address.city }},
+          {{ item.billing_address.state }},
+          {{ item.billing_address.country }}
+        </p>
+        {% else %}
+        <p class="text-xs text-secondary mb-0">N/A</p>
+        {% endif %}
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">
+          {{ item.total_products_bought|default:"0" }}
+        </p>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from PetStore.models import Product , Category, Cart, CartItem, Order, OrderItem
-from Admin.models import Customer, Billing 
+from Admin.models import Customer, Billing
 from .serializers import *
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
@@ -10,13 +10,22 @@ from django.db import transaction
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
-from rest_framework import viewsets 
+from rest_framework import viewsets, filters # Import filters
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authtoken.models import Token
 import stripe
+from rest_framework import filters
 import logging
 from decimal import Decimal
+from django.contrib.auth.models import User
+from rest_framework import generics
+
+from .serializers import RegisteredCustomerSerializer
+from rest_framework.permissions import AllowAny
+
+from django_filters.rest_framework import DjangoFilterBackend # New import for DjangoFilterBackend
+
 logger = logging.getLogger(__name__) # Initialize logger for this module
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -199,7 +208,7 @@ def place_order_api(request):
 
     if not cart.items.exists():
         return Response({'error': 'Your cart is empty. Please add items before placing an order.'},
-                        status=status.HTTP_400_BAD_REQUEST)
+                         status=status.HTTP_400_BAD_REQUEST)
 
     data = request.data
     payment_method_id = data.get('payment_method_id') # For the first call to create PI
@@ -256,7 +265,7 @@ def place_order_api(request):
             if payment_intent_id:
                 try:
                     payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-                    
+
                     # Check if an order already exists for this payment_intent_id
                     existing_order = Order.objects.filter(stripe_payment_intent_id=payment_intent_id).first()
                     if existing_order:
@@ -328,7 +337,7 @@ def place_order_api(request):
                                 price= price, # Use product's current price at order time for OrderItem
                                 total_price=item.quantity * price
                             )
-                        
+
                         cart.items.all().delete() # Clear the cart items
                         # If you want to delete the cart itself if it's empty, you could do:
                         # if not cart.items.exists():
@@ -416,7 +425,7 @@ def place_order_api(request):
     except Exception as e: # Catch any other unexpected errors during the entire process
         logger.exception("Unhandled error in place_order_api:")
         return Response({'error': f'An unexpected error occurred: {str(e)}'},
-                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                     status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # --- Authentication Views ---
 @api_view(['POST'])
@@ -467,22 +476,25 @@ def logout_api(request):
     except Exception as e:
         logger.exception("Logout failed:")
         return Response({'success': False, 'error': f'Logout failed: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def order_history_api(request):
-    user = request.user 
+    user = request.user
 
-    orders = Order.objects.filter(user=user).prefetch_related('items__product').order_by('-created_at') 
-    
+    orders = Order.objects.filter(user=user).prefetch_related('items__product').order_by('-created_at')
+
     serializer = OrderHistorySerializer(orders, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # --- New Admin-Specific API ViewSets ---
 class ProductAdminViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all() # Changed to PetStoreProduct
+    queryset = Product.objects.all()
     serializer_class = ProductAdminSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter] # Add filter backends
+    filterset_fields = ['category'] # Enable filtering by category ID
+    search_fields = ['name', 'description'] # Enable searching by name and description
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
@@ -491,6 +503,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class OrderAdminViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderAdminSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter] # Add filter backends
+    filterset_fields = ['status'] # Enable filtering by the 'status' field
+    search_fields = ['id', 'billing_first_name', 'billing_email'] # Optional: Add search functionality
 
 class BillingViewSet(viewsets.ModelViewSet):
     queryset = Billing.objects.all()
@@ -499,3 +514,23 @@ class BillingViewSet(viewsets.ModelViewSet):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+    # Include prefetch_related for efficiency when fetching order lists or details
+    queryset = Order.objects.all().prefetch_related('order_items')
+
+
+class RegisteredCustomerAPIView(generics.ListCreateAPIView):
+    """
+    API View to list all registered customers (GET) and register new ones (POST).
+    """
+    queryset = User.objects.all() # This queryset is used for listing (GET)
+
+    # Override get_serializer_class to use different serializers for GET and POST
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return RegisterSerializer # Use RegisterSerializer for creating (POST)
+        return RegisteredCustomerSerializer # Use RegisteredCustomerSerializer for listing (GET)
+
+    permission_classes = [AllowAny]

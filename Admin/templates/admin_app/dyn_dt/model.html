@@ -14,7 +14,7 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
-            {# Main Navigation Tabs (Product, Customer, Order, OrderItem, Billing) #}
+            {# Main Navigation Tabs (Product, Customer, Order) #}
             <div class="card mb-4">
                 <div class="card-header pb-0" style="position: sticky; top: 0; background-color: white; z-index: 100;">
                     <h6>Select Data Table</h6>
@@ -33,26 +33,13 @@
                                 Customer
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if set_main_item == 'order' %}active{% endif %}"
-                               href="{% url 'Admin:dynamic_dt_overview' %}?main_item=order" role="tab">
-                                Order
-                            </a>
-                        </li>
-                        {% if 'orderitem' in model_map %}
-                        <li class="nav-item">
-                            <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if set_main_item == 'orderitem' %}active{% endif %}"
-                               href="{% url 'Admin:dynamic_dt_overview' %}?main_item=orderitem" role="tab">
-                                OrderItem
-                            </a>
-                        </li>
-                        {% endif %}
-                        <li class="nav-item">
-                            <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if set_main_item == 'billing' %}active{% endif %}"
-                               href="{% url 'Admin:dynamic_dt_overview' %}?main_item=billing" role="tab">
-                                Billing
-                            </a>
-                        </li>
+                        {# Order as a direct navigation link #}
+<li class="nav-item">
+    <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if set_main_item == 'order' %}active{% endif %}"
+       href="{% url 'Admin:dynamic_dt_overview' %}?main_item=order" role="tab">
+        Order
+    </a>
+</li>
                     </ul>
                 </div>
             </div>
@@ -96,11 +83,72 @@
                                 Birds
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if set_category == 'Pet Foods' %}active{% endif %}"
+                               href="{% url 'Admin:dynamic_dt_overview' %}?main_item=product&category=Pet Foods" role="tab">
+                                Pet Foods
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if set_category == 'Pet Clothes' %}active{% endif %}"
+                               href="{% url 'Admin:dynamic_dt_overview' %}?main_item=product&category=Pet Clothes" role="tab">
+                                Pet Clothes
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
             {% endif %}
             {# End Sub-Navigation #}
+
+{% if set_main_item == 'order' %}
+<div class="card mb-4">
+    <div class="card-header pb-0">
+        <h6>Filter Orders by Status</h6>
+    </div>
+    <div class="card-body">
+        <ul class="nav nav-pills nav-fill p-1" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if request.GET.status == 'All' or not request.GET.status %}active{% endif %}"
+                   href="{% url 'Admin:dynamic_dt_overview' %}?main_item=order&status=All" role="tab">
+                    All Orders
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if request.GET.status == 'Pending' %}active{% endif %}"
+                   href="{% url 'Admin:dynamic_dt_overview' %}?main_item=order&status=Pending" role="tab">
+                    Pending
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if request.GET.status == 'Processing' %}active{% endif %}"
+                   href="{% url 'Admin:dynamic_dt_overview' %}?main_item=order&status=Processing" role="tab">
+                    Processing
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if request.GET.status == 'Shipped' %}active{% endif %}"
+                   href="{% url 'Admin:dynamic_dt_overview' %}?main_item=order&status=Shipped" role="tab">
+                    Shipped
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if request.GET.status == 'Delivered' %}active{% endif %}"
+                   href="{% url 'Admin:dynamic_dt_overview' %}?main_item=order&status=Delivered" role="tab">
+                    Delivered
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link mb-0 px-0 py-1 d-flex align-items-center justify-content-center {% if request.GET.status == 'Cancelled' %}active{% endif %}"
+                   href="{% url 'Admin:dynamic_dt_overview' %}?main_item=order&status=Cancelled" role="tab">
+                    Cancelled
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endif %}
+
 
             <div class="card mb-4">
                 <div class="card-header pb-0">
@@ -121,31 +169,34 @@
                                 <input type="text" class="form-control flex-grow-1" id="searchInput" onkeyup="performLiveSearch()" value="{{ request.GET.search }}">    </div>
                         </div>
                         <div class="col-md-8 d-flex justify-content-end align-items-center">
-                            
-                            {# Items Per Page Dropdown #}
-                            <div class="dropdown me-2">
-                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="pageItemsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Items per page: {{ page_items }}
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="pageItemsDropdown">
-                                    <li><a class="dropdown-item" href="#" onclick="changePageItems(10)">10</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="changePageItems(25)">25</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="changePageItems(50)">50</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="changePageItems(100)">100</a></li>
-                                </ul>
-                            </div>
 
-                            {# Add Filter Button #}
-                            <button type="button" class="btn btn-outline-info btn-sm me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
-                                <i class="fas fa-filter me-1"></i> Add Filter
-                            </button>
+    {# Items Per Page Dropdown #}
+    <div class="dropdown me-2">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="pageItemsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            Items per page: {{ page_items }}
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="pageItemsDropdown">
+            <li><a class="dropdown-item" href="#" onclick="changePageItems(10)">10</a></li>
+            <li><a class="dropdown-item" href="#" onclick="changePageItems(25)">25</a></li>
+            <li><a class="dropdown-item" href="#" onclick="changePageItems(50)">50</a></li>
+            <li><a class="dropdown-item" href="#" onclick="changePageItems(100)">100</a></li>
+        </ul>
+    </div>
 
-                            {# Export CSV Button #}
-                            <a href="{% url 'Admin:export_csv' set_main_item %}{% if request.GET.search %}?search={{ request.GET.search }}{% endif %}" class="btn btn-success btn-sm me-2">
-                                    Export CSV
-                                </a>
-                        </div>
-                    </div>
+    
+
+    
+
+    {# Add Filter Button #}
+    <button type="button" class="btn btn-outline-info btn-sm me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
+        <i class="fas fa-filter me-1"></i> Add Filter
+    </button>
+
+    {# Export CSV Button #}
+    <a href="{% url 'Admin:export_csv' set_main_item %}{% if request.GET.search %}?search={{ request.GET.search }}{% endif %}" class="btn btn-success btn-sm me-2">
+            Export CSV
+        </a>
+</div>
                     {% if filter_instance %}
                     <div class="row mt-2">
                         <div class="col-12">
@@ -161,9 +212,15 @@
                     </div>
                     {% endif %}
                 </div>
-                <div class="card-body px-0 pt-0 pb-2">
-                    {% include 'admin_app/dyn_dt/items-table.html' %}
-                </div>
+                <div class="table-responsive p-0">
+                        {% if set_main_item == 'customer' %}
+                            {% include 'admin_app/dyn_dt/items-table-customer.html' %}
+                        {% elif set_main_item == 'order' %}
+                            {% include 'admin_app/dyn_dt/items-table-order.html' %}
+                        {% else %} {# This will load items-table.html for 'product' and any other unspecified main_items #}
+                            {% include 'admin_app/dyn_dt/items-table.html' with model_name=set_main_item %}
+                        {% endif %}
+                    </div>
             </div>
         </div>
     </div>
@@ -208,11 +265,19 @@
                             <label class="form-label">Category</label>
                             <select class="form-control" name="category" required>
                                 <option value="">Select Category</option>
-                                <option value="1">Dogs</option> {# Assuming Category IDs #}
+                                {# Dynamically load categories from context if available, otherwise hardcode #}
+                                {% comment %}
+                                    Assuming you pass `categories` in your context from the view:
+                                    {% for cat in categories %}
+                                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                {% endcomment %}
+                                <option value="1">Dogs</option> {# Assuming Category IDs and Names #}
                                 <option value="2">Cats</option>
                                 <option value="3">Fish</option>
                                 <option value="4">Birds</option>
-                                {# You might want to dynamically load categories here from context if you have many #}
+                                <option value="5">Pet Foods</option>
+                                <option value="6">Pet Clothes</option>
                             </select>
                         </div>
                         {# Image Upload Field #}
@@ -226,16 +291,28 @@
                         </div>
                     {% elif set_main_item == 'customer' %}
                         <div class="input-group input-group-outline my-3">
-                            <label class="form-label">First Name</label>
-                            <input type="text" class="form-control" name="first_name" required>
-                        </div>
-                        <div class="input-group input-group-outline my-3">
-                            <label class="form-label">Last Name</label>
-                            <input type="text" class="form-control" name="last_name" required>
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" name="username" required>
                         </div>
                         <div class="input-group input-group-outline my-3">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" name="email" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" name="confirm_password" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" name="first_name">
+                        </div>
+                        <div class="input-group input-group-outline my-3">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" name="last_name">
                         </div>
                         <div class="input-group input-group-outline my-3">
                             <label class="form-label">Phone</label>
@@ -267,6 +344,24 @@
                                 <option value="delivered">Delivered</option>
                                 <option value="cancelled">Cancelled</option>
                             </select>
+                        </div>
+                    {% elif set_main_item == 'orderitem' %}
+                        {# Fields for OrderItem creation #}
+                        <div class="input-group input-group-outline my-3">
+                            <label class="form-label">Order ID</label>
+                            <input type="number" class="form-control" name="order" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3">
+                            <label class="form-label">Product ID</label>
+                            <input type="number" class="form-control" name="product" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" class="form-control" name="quantity" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3">
+                            <label class="form-label">Price</label>
+                            <input type="number" step="0.01" class="form-control" name="price" required>
                         </div>
                     {% elif set_main_item == 'billing' %}
                         <div class="input-group input-group-outline my-3">
@@ -347,10 +442,19 @@
                             <label class="form-label">Category</label>
                             <select class="form-control" name="category" required>
                                 <option value="">Select Category</option>
-                                <option value="1" {% if item.category.id == 1 %}selected{% endif %}>Dogs</option>
-                                <option value="2" {% if item.category.id == 2 %}selected{% endif %}>Cats</option>
-                                <option value="3" {% if item.category.id == 3 %}selected{% endif %}>Fish</option>
-                                <option value="4" {% if item.category.id == 4 %}selected{% endif %}>Birds</option>
+                                {# Dynamically load categories from context if available, otherwise hardcode #}
+                                {% comment %}
+                                    Assuming you pass `categories` in your context from the view:
+                                    {% for cat in categories %}
+                                        <option value="{{ cat.id }}" {% if item.category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                    {% endfor %}
+                                {% endcomment %}
+                                <option value="1" {% if item.category.name == 'Dogs' %}selected{% endif %}>Dogs</option>
+                                <option value="2" {% if item.category.name == 'Cats' %}selected{% endif %}>Cats</option>
+                                <option value="3" {% if item.category.name == 'Fish' %}selected{% endif %}>Fish</option>
+                                <option value="4" {% if item.category.name == 'Birds' %}selected{% endif %}>Birds</option>
+                                <option value="5" {% if item.category.name == 'Pet Foods' %}selected{% endif %}>Pet Foods</option>
+                                <option value="6" {% if item.category.name == 'Pet Clothes' %}selected{% endif %}>Pet Clothes</option>
                             </select>
                         </div>
                         {# Image Upload Field (for update) #}
@@ -411,6 +515,24 @@
                                 <option value="cancelled" {% if item.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
                             </select>
                         </div>
+                    {% elif set_main_item == 'orderitem' %}
+                        {# Fields for OrderItem editing #}
+                        <div class="input-group input-group-outline my-3 focused is-filled">
+                            <label class="form-label">Order ID</label>
+                            <input type="number" class="form-control" name="order" value="{{ item.order.id }}" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3 focused is-filled">
+                            <label class="form-label">Product ID</label>
+                            <input type="number" class="form-control" name="product" value="{{ item.product.id }}" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3 focused is-filled">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" class="form-control" name="quantity" value="{{ item.quantity }}" required>
+                        </div>
+                        <div class="input-group input-group-outline my-3 focused is-filled">
+                            <label class="form-label">Price</label>
+                            <input type="number" step="0.01" class="form-control" name="price" value="{{ item.price }}" required>
+                        </div>
                     {% elif set_main_item == 'billing' %}
                         <div class="input-group input-group-outline my-3 focused is-filled">
                             <label class="form-label">Customer ID</label>
@@ -461,7 +583,18 @@
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this {{ set_main_item }} (ID: {{ item.id }})?</p>
-                <p><strong>Name:</strong> {{ item.name }}</p>
+                {# Display relevant name/identifier for confirmation #}
+                {% if set_main_item == 'product' %}
+                    <p><strong>Name:</strong> {{ item.name }}</p>
+                {% elif set_main_item == 'customer' %}
+                    <p><strong>Name:</strong> {{ item.first_name }} {{ item.last_name }}</p>
+                {% elif set_main_item == 'order' %}
+                    <p><strong>Order ID:</strong> {{ item.id }} (Customer: {{ item.customer.first_name }} {{ item.customer.last_name }})</p>
+                {% elif set_main_item == 'orderitem' %}
+                    <p><strong>Order Item ID:</strong> {{ item.id }} (Product: {{ item.product.name }})</p>
+                {% elif set_main_item == 'billing' %}
+                    <p><strong>Billing ID:</strong> {{ item.id }} (Customer: {{ item.customer.first_name }} {{ item.customer.last_name }})</p>
+                {% endif %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -718,12 +851,12 @@ const deleteButton = event.target.closest('.delete-btn');
                         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
                         fetch(deleteUrl, {
-                            method: 'DELETE', // Use DELETE method for deletion
+                            method: 'POST', // Use POST for deletion as Django's CSRF requires it for forms
                             headers: {
                                 'X-CSRFToken': csrfToken, // Include CSRF token for Django
-                                'Content-Type': 'application/json' // Indicate content type, even if body is empty
-                            }
-                            // No body is typically needed for DELETE by ID
+                                'Content-Type': 'application/x-www-form-urlencoded' // Or 'application/json' if you send JSON body
+                            },
+                            body: `id=${itemId}&_method=DELETE` // Simulate a DELETE method for Django's POST handling
                         })
                         .then(response => {
                             if (response.ok) { // Check for 2xx status codes (200 OK, 204 No Content)
@@ -747,5 +880,14 @@ const deleteButton = event.target.closest('.delete-btn');
             });
         }
     }); // End of DOMContentLoaded
+
+    // Function to change items per page
+    function changePageItems(numItems) {
+        let currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('page_items', numItems);
+        // Reset page to 1 when changing items per page
+        currentUrl.searchParams.set('page', 1); 
+        window.location.href = currentUrl.toString();
+    }
 </script>
 {% endblock extra_js %}

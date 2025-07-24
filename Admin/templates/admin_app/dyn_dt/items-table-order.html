@@ -1,0 +1,307 @@
+{% load static get_attribute %}
+
+<table class="table align-items-center mb-0">
+    <thead>
+        <tr>
+            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start">Order ID</th>
+            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-start">Order Date</th>
+            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Customer</th>
+            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Total Amount</th>
+            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
+            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Payment</th>
+            <th class="text-secondary opacity-7 ps-2">Order Detail</th> {# NEW HEADER: Order Detail #}
+            <th class="text-secondary opacity-7"></th> {# For existing actions (Edit/Delete) #}
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items.object_list %}
+        <tr class="table-row">
+            <td>
+                <p class="text-xs font-weight-bold mb-0 text-start">{{ item.id }}</p>
+            </td>
+            <td>
+                <p class="text-xs font-weight-bold mb-0 text-start">{{ item.created_at|date:"Y-m-d H:i" }}</p>
+            </td>
+            <td>
+                <p class="text-xs font-weight-bold mb-0">{{ item.first_name }} {{ item.last_name }}</p>
+            </td>
+            <td>
+                <p class="text-xs font-weight-bold mb-0">${{ item.total_amount }}</p>
+            </td>
+            <td>
+                <select class="form-select form-select-sm
+                    {% if item.status == 'Pending' %}bg-gradient-warning text-dark
+                    {% elif item.status == 'Processing' %}bg-gradient-info text-dark
+                    {% elif item.status == 'Shipped' %}bg-gradient-primary text-dark
+                    {% elif item.status == 'Delivered' %}bg-gradient-success text-dark
+                    {% elif item.status == 'Cancelled' %}bg-gradient-danger text-dark
+                    {% endif %}"
+                    onchange="updateOrderStatus(this, {{ item.id }})">
+                    <option value="Pending" {% if item.status == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Processing" {% if item.status == 'Processing' %}selected{% endif %}>Processing</option>
+                    <option value="Shipped" {% if item.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+                    <option value="Delivered" {% if item.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                    <option value="Cancelled" {% if item.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </td>
+            <td>
+                <p class="text-xs font-weight-bold mb-0">{{ item.payment_status }}</p>
+            </td>
+            <td> {# NEW CELL FOR ORDER DETAIL LINK #}
+                <a href="#" class="btn btn-link text-secondary text-xs font-weight-bold mb-0"
+                   data-bs-toggle="modal" data-bs-target="#orderDetailModal-{{item.id}}"
+                   data-bs-original-title="View Order Details">
+                    View Details
+                </a>
+            </td>
+            <td class="align-middle">
+                <a href="#" class="text-secondary font-weight-bold text-xs edit-btn" data-bs-toggle="modal" data-bs-target="#editOrder-{{item.id}}">Edit</a> |
+                <a href="#" class="text-danger font-weight-bold text-xs delete-btn" data-item-id="{{item.id}}" data-model-name="{{set_main_item}}" data-delete-url="{% url 'Admin:delete' set_main_item item.id %}">Delete</a>
+            </td>
+        </tr>
+
+        {# Order Detail Modal (Dynamically generated for each order item) #}
+        <div class="modal fade" id="orderDetailModal-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="orderDetailModalLabel-{{ item.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="orderDetailModalLabel-{{ item.id }}">Order Details #{{ item.id }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-sm"><strong>Order Date:</strong> {{ item.created_at|date:"Y-m-d H:i" }}</p>
+                        <p class="text-sm"><strong>Customer:</strong> {{ item.first_name }} {{ item.last_name }} ({{ item.email }})</p>
+                        <p class="text-sm"><strong>Total Amount:</strong> ${{ item.total_amount }}</p>
+                        <p class="text-sm"><strong>Status:</strong> {{ item.status }}</p>
+                        <p class="text-sm"><strong>Payment Status:</strong> {{ item.payment_status }}</p>
+                        <p class="text-sm"><strong>Payment Method:</strong> {{ item.payment_method }}</p>
+
+                        <h6 class="mt-4">Order Items:</h6>
+                        {% if item.order_items.all %} {# Assuming 'order_items' as related_name #}
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Quantity</th>
+                                            <th>Price</th>
+                                            <th>Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order_item in item.order_items.all %}
+                                        <tr>
+                                            <td>{{ order_item.product.name }}</td>
+                                            <td>{{ order_item.quantity }}</td>
+                                            <td>${{ order_item.price }}</td>
+                                            <td>${{ order_item.subtotal }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-sm text-muted">No items found for this order.</p>
+                        {% endif %}
+
+                        <h6 class="mt-4">Shipping Address:</h6>
+                        <p class="text-sm mb-0">{{ item.address_line_1 }}</p>
+                        {% if item.address_line_2 %}<p class="text-sm mb-0">{{ item.address_line_2 }}</p>{% endif %}
+                        <p class="text-sm mb-0">{{ item.city }}, {{ item.state }} {{ item.zip_code }}</p>
+                        <p class="text-sm">{{ item.country }}</p>
+
+                        <h6 class="mt-4">Billing Address:</h6>
+                        <p class="text-sm mb-0">{{ item.billing_address_line_1 }}</p>
+                        {% if item.billing_address_line_2 %}<p class="text-sm mb-0">{{ item.billing_address_line_2 }}</p>{% endif %}
+                        <p class="text-sm mb-0">{{ item.billing_city }}, {{ item.billing_state }} {{ item.billing_zip_code }}</p>
+                        <p class="text-sm">{{ item.billing_country }}</p>
+                        
+                        <p class="text-sm mt-4"><strong>Shipping Cost:</strong> ${{ item.shipping_cost|default:"0.00" }}</p>
+                        <p class="text-sm"><strong>Stripe Payment Intent ID:</strong> {{ item.stripe_payment_intent_id|default:"N/A" }}</p>
+                        <p class="text-sm"><strong>User ID:</strong> {{ item.user|default:"N/A" }}</p>
+                        <p class="text-sm"><strong>Updated At:</strong> {{ item.updated_at|date:'Y-m-d H:i:s' }}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Edit Order Modal (Dynamically generated for each order item) - KEEP AS IS #}
+        <div class="modal fade" id="editOrder-{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="editOrderLabel-{{ item.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editOrderLabel-{{ item.id }}">Edit Order #{{ item.id }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="editOrderForm-{{ item.id }}" action="{% url 'Admin:update' set_main_item item.id %}" method="post">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <input type="hidden" name="id" value="{{ item.id }}">
+
+                            <div class="mb-3">
+                                <label for="edit_total_amount-{{ item.id }}" class="form-label">Total Amount</label>
+                                <input type="number" step="0.01" class="form-control" id="edit_total_amount-{{ item.id }}" name="total_amount" value="{{ item.total_amount }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_status-{{ item.id }}" class="form-label">Status</label>
+                                <select class="form-select" id="edit_status-{{ item.id }}" name="status" required>
+                                    <option value="Pending" {% if item.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                    <option value="Processing" {% if item.status == 'Processing' %}selected{% endif %}>Processing</option>
+                                    <option value="Shipped" {% if item.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+                                    <option value="Delivered" {% if item.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                                    <option value="Cancelled" {% if item.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_payment_status-{{ item.id }}" class="form-label">Payment Status</label>
+                                <select class="form-select" id="edit_payment_status-{{ item.id }}" name="payment_status" required>
+                                    <option value="Paid" {% if item.payment_status == 'Paid' %}selected{% endif %}>Paid</option>
+                                    <option value="Unpaid" {% if item.payment_status == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+                                    <option value="Refunded" {% if item.payment_status == 'Refunded' %}selected{% endif %}>Refunded</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_payment_method-{{ item.id }}" class="form-label">Payment Method</label>
+                                <select class="form-select" id="edit_payment_method-{{ item.id }}" name="payment_method" required>
+                                    <option value="credit_card" {% if item.payment_method == 'credit_card' %}selected{% endif %}>Credit Card</option>
+                                    <option value="paypal" {% if item.payment_method == 'paypal' %}selected{% endif %}>PayPal</option>
+                                    <option value="bank_transfer" {% if item.payment_method == 'bank_transfer' %}selected{% endif %}>Bank Transfer</option>
+                                    <option value="cash_on_delivery" {% if item.payment_method == 'cash_on_delivery' %}selected{% endif %}>Cash on Delivery</option>
+                                </select>
+                            </div>
+
+                            <h6 class="mt-4">Customer Information</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_customer_first_name-{{ item.id }}" class="form-label">Customer First Name</label>
+                                    <input type="text" class="form-control" id="edit_customer_first_name-{{ item.id }}" name="first_name" value="{{ item.first_name }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_customer_last_name-{{ item.id }}" class="form-label">Customer Last Name</label>
+                                    <input type="text" class="form-control" id="edit_customer_last_name-{{ item.id }}" name="last_name" value="{{ item.last_name }}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_customer_email-{{ item.id }}" class="form-label">Customer Email</label>
+                                <input type="email" class="form-control" id="edit_customer_email-{{ item.id }}" name="email" value="{{ item.email }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_customer_phone-{{ item.id }}" class="form-label">Customer Phone</label>
+                                <input type="text" class="form-control" id="edit_customer_phone-{{ item.id }}" name="phone" value="{{ item.phone }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_customer_address_line_1-{{ item.id }}" class="form-label">Customer Address Line 1</label>
+                                <input type="text" class="form-control" id="edit_customer_address_line_1-{{ item.id }}" name="address_line_1" value="{{ item.address_line_1 }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_customer_address_line_2-{{ item.id }}" class="form-label">Customer Address Line 2</label>
+                                <input type="text" class="form-control" id="edit_customer_address_line_2-{{ item.id }}" name="address_line_2" value="{{ item.address_line_2 }}">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_customer_city-{{ item.id }}" class="form-label">Customer City</label>
+                                    <input type="text" class="form-control" id="edit_customer_city-{{ item.id }}" name="city" value="{{ item.city }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_customer_state-{{ item.id }}" class="form-label">Customer State</label>
+                                    <input type="text" class="form-control" id="edit_customer_state-{{ item.id }}" name="state" value="{{ item.state }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_customer_zip_code-{{ item.id }}" class="form-label">Customer Zip Code</label>
+                                    <input type="text" class="form-control" id="edit_customer_zip_code-{{ item.id }}" name="zip_code" value="{{ item.zip_code }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_customer_country-{{ item.id }}" class="form-label">Customer Country</label>
+                                    <input type="text" class="form-control" id="edit_customer_country-{{ item.id }}" name="country" value="{{ item.country }}">
+                                </div>
+                            </div>
+
+                            <h6 class="mt-4">Billing Information</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_billing_first_name-{{ item.id }}" class="form-label">Billing First Name</label>
+                                    <input type="text" class="form-control" id="edit_billing_first_name-{{ item.id }}" name="billing_first_name" value="{{ item.billing_first_name }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_billing_last_name-{{ item.id }}" class="form-label">Billing Last Name</label>
+                                    <input type="text" class="form-control" id="edit_billing_last_name-{{ item.id }}" name="billing_last_name" value="{{ item.billing_last_name }}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_billing_email-{{ item.id }}" class="form-label">Billing Email</label>
+                                <input type="email" class="form-control" id="edit_billing_email-{{ item.id }}" name="billing_email" value="{{ item.billing_email }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_billing_phone-{{ item.id }}" class="form-label">Billing Phone</label>
+                                <input type="text" class="form-control" id="edit_billing_phone-{{ item.id }}" name="billing_phone" value="{{ item.billing_phone }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_billing_address_line_1-{{ item.id }}" class="form-label">Billing Address Line 1</label>
+                                <input type="text" class="form-control" id="edit_billing_address_line_1-{{ item.id }}" name="billing_address_line_1" value="{{ item.billing_address_line_1 }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_billing_address_line_2-{{ item.id }}" class="form-label">Billing Address Line 2</label>
+                                <input type="text" class="form-control" id="edit_billing_address_line_2-{{ item.id }}" name="billing_address_line_2" value="{{ item.billing_address_line_2 }}">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_billing_city-{{ item.id }}" class="form-label">Billing City</label>
+                                    <input type="text" class="form-control" id="edit_billing_city-{{ item.id }}" name="billing_city" value="{{ item.billing_city }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_billing_state-{{ item.id }}" class="form-label">Billing State</label>
+                                    <input type="text" class="form-control" id="edit_billing_state-{{ item.id }}" name="billing_state" value="{{ item.billing_state }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_billing_zip_code-{{ item.id }}" class="form-label">Billing Zip Code</label>
+                                    <input type="text" class="form-control" id="edit_billing_zip_code-{{ item.id }}" name="billing_zip_code" value="{{ item.billing_zip_code }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit_billing_country-{{ item.id }}" class="form-label">Billing Country</label>
+                                    <input type="text" class="form-control" id="edit_billing_country-{{ item.id }}" name="billing_country" value="{{ item.billing_country }}">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_shipping_cost-{{ item.id }}" class="form-label">Shipping Cost</label>
+                                <input type="number" step="0.01" class="form-control" id="edit_shipping_cost-{{ item.id }}" name="shipping_cost" value="{{ item.shipping_cost }}">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_stripe_payment_intent_id-{{ item.id }}" class="form-label">Stripe Payment Intent ID</label>
+                                <input type="text" class="form-control" id="edit_stripe_payment_intent_id-{{ item.id }}" name="stripe_payment_intent_id" value="{{ item.stripe_payment_intent_id }}" readonly>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_user-{{ item.id }}" class="form-label">User ID</label>
+                                <input type="number" class="form-control" id="edit_user-{{ item.id }}" name="user" value="{{ item.user }}" readonly>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_created_at-{{ item.id }}" class="form-label">Created At</label>
+                                <input type="text" class="form-control" id="edit_created_at-{{ item.id }}" value="{{ item.created_at|date:'Y-m-d H:i:s' }}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_updated_at-{{ item.id }}" class="form-label">Updated At</label>
+                                <input type="text" class="form-control" id="edit_updated_at-{{ item.id }}" value="{{ item.updated_at|date:'Y-m-d H:i:s' }}" readonly>
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn bg-gradient-primary">Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </tbody>
+</table>

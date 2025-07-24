@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from rest_framework.routers import DefaultRouter
-
+from .views import RegisteredCustomerAPIView
 app_name = 'APIs' 
 
 urlpatterns = [
@@ -17,6 +17,7 @@ urlpatterns = [
     path('login/', views.login_api, name='api-login'),
     path('logout/', views.logout_api, name='api-logout'),
     path('order-history/', views.order_history_api, name='order_history_api'),
+    path('register-customers/', RegisteredCustomerAPIView.as_view(), name='register-customers'),
 ]
 
 

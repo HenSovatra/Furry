@@ -1,6 +1,6 @@
-import requests # Added this import
+import requests
 import json
-import datetime 
+import datetime
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.apps import apps
@@ -13,20 +13,17 @@ from .models import Product, Customer, Order, Billing
 from PetStore.models import Product as PetStoreProduct, Category
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
-from urllib.parse import urlparse, parse_qs, quote 
-# Define the base URL for your API
-# IMPORTANT: In a real application, this should be configured in settings.py
-# and retrieved using django.conf.settings (e.g., from django.conf import settings; BASE_API_URL = settings.API_BASE_URL)
+from urllib.parse import urlparse, parse_qs, quote
+
 BASE_API_URL = "http://127.0.0.1:8000/api/"
 
-# Mapping for model names to API endpoints
 API_ENDPOINTS = {
     'product': 'admin/products/',
-    'customer': 'admin/customers/',
+    'customer': 'register-customers/',
     'order': 'admin/orders/',
-    'orderitem': 'admin/orderitems/', # Assuming an OrderItemViewSet is exposed
+    'orderitem': 'admin/orderitems/',
     'billing': 'admin/billings/',
-    'category': 'admin/categories/', # Added category for completeness
+    'category': 'admin/categories/',
 }
 
 def get_model_fields(model):
@@ -46,8 +43,6 @@ def get_model_fields(model):
             fields.append(field_name)
 
             if isinstance(field, ForeignKey):
-                # For FK fields, we'll try to get their related model data for display
-                # Note: This still fetches from DB, as API might return just IDs.
                 fk_fields[field_name] = field.related_model.objects.all()
                 fk_fields_keys.append(field_name)
             elif isinstance(field, ManyToManyField):
@@ -67,7 +62,7 @@ def get_model_fields(model):
             elif isinstance(field, BooleanField):
                 read_only_fields.append(field_name)
             elif isinstance(field, ImageField):
-                read_only_fields.append(field_name) # Images are handled separately
+                read_only_fields.append(field_name)
 
     return {
         'db_field_names': fields,
@@ -100,7 +95,7 @@ def get_base_context(request, model_name=None):
         'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
         'billing': Billing,
     }
-    context['model_map'] = model_map_for_context # Pass model_map to context for template use
+    context['model_map'] = model_map_for_context
     return context
 
 def dashboard(request):
@@ -108,8 +103,6 @@ def dashboard(request):
     context['segment'] = 'dashboard'
     context['page_title'] = "Admin Dashboard"
 
-    # For dashboard, you might want to call specific API endpoints for summary data
-    # For now, keeping direct DB queries for simplicity as they are summaries
     total_products = PetStoreProduct.objects.count()
     total_customers = Customer.objects.count()
     total_orders = Order.objects.count()
@@ -147,7 +140,7 @@ def dynamic_dt_overview(request):
     set_main_item = request.GET.get('main_item', 'product')
 
     main_item = request.GET.get('main_item', 'product').lower()
-    category = request.GET.get('category', 'All') # For product filtering
+    category = request.GET.get('category', 'All')
     search_query = request.GET.get('search', '')
     page = request.GET.get('page', 1)
     page_items_count = request.session.get(f'page_items_{main_item}', 10)
@@ -157,27 +150,29 @@ def dynamic_dt_overview(request):
     if not api_path:
         return HttpResponse("API endpoint not found for selected item.", status=404)
 
-    # Construct query parameters for the API call
     params = {'page': page, 'page_size': page_items_count}
     if search_query:
-        params['search'] = search_query # Assuming API supports a 'search' parameter
+        params['search'] = search_query
 
-    # Add category filter for products if applicable
     if main_item == 'product' and category != 'All':
         try:
-            # Get the category ID to pass to the API
             category_obj = Category.objects.get(name__iexact=category)
-            params['category'] = category_obj.id # Assuming API filters by category ID
+            params['category'] = category_obj.id
         except Category.DoesNotExist:
-            pass # No category filter if not found
+            pass
 
-    # For other specific filters from session, convert them to API query params
+    if main_item == 'order':
+        status_filter = request.GET.get('status', 'All')
+        context['set_status'] = status_filter
+        if status_filter != 'All':
+            params['status'] = status_filter
+
     filter_data = request.session.get(f'filters_{main_item}', [])
     for f_data in filter_data:
         key = f_data.get('key')
         value = f_data.get('value')
         if key and value:
-            params[key] = value # Assuming API can handle direct key-value filters
+            params[key] = value
 
     api_url = f"{BASE_API_URL}{api_path}"
 
@@ -185,14 +180,13 @@ def dynamic_dt_overview(request):
     total_count = 0
     try:
         response = requests.get(api_url, params=params)
-        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        response.raise_for_status()
         api_data = response.json()
 
-        # Check if api_data is a list (direct return) or a dictionary (paginated DRF response)
         if isinstance(api_data, list):
             items = api_data
             total_count = len(api_data)
-        else: # Assume it's a dictionary with 'results' and 'count' for paginated data
+        else:
             items = api_data.get('results', [])
             total_count = api_data.get('count', 0)
 
@@ -200,7 +194,6 @@ def dynamic_dt_overview(request):
         print(f"API Error fetching {main_item} data: {e}")
         return HttpResponse(f"Error fetching data from API: {e}", status=500)
 
-    # Mimic Django Paginator page object for template compatibility
     class ApiPaginatorPage:
         def __init__(self, data, count, page_num, page_size):
             self.object_list = data
@@ -239,14 +232,11 @@ def dynamic_dt_overview(request):
     context['set_main_item'] = main_item
     context['set_category'] = category
 
-    # Model info for fields for rendering forms etc. still comes from local model definition
-    # Ensure correct model is selected for retrieving field info
     model = apps.get_model('Admin', main_item.capitalize()) if main_item.lower() not in ['product', 'category'] else (PetStoreProduct if main_item.lower() == 'product' else Category)
-    if main_item.lower() == 'orderitem' and not model: # special handling for OrderItem if not in Admin models
-        model = apps.get_model('PetStore', 'OrderItem') # Assuming OrderItem is in PetStore
+    if main_item.lower() == 'orderitem' and not model:
+        model = apps.get_model('PetStore', 'OrderItem')
 
     if not model:
-        # Fallback if model could not be determined, should not happen with proper mappings
         return HttpResponse("Could not determine model for field info.", status=500)
 
     model_info = get_model_fields(model)
@@ -254,41 +244,23 @@ def dynamic_dt_overview(request):
 
     context['items'] = paginated_items
     context['db_filters'] = model_info['db_field_names']
-    context['filter_instance'] = filter_data # Pass filters back to template
-    context['page_items'] = page_items_count # Ensure this is passed correctly
+    context['filter_instance'] = filter_data
+    context['page_items'] = page_items_count
     context['model_name'] = set_main_item
     return render(request, 'admin_app/dyn_dt/model.html', context)
 
-
-def get_base_context(request):
-    return {
-        'segment': 'dynamic-datatables',
-        'parent': 'tables',
-        'set_main_item': request.GET.get('main_item', 'product'),
-        'model_map': API_ENDPOINTS, # Used to show available models
-    }
-
-# Your existing dynamic_dt_overview function...
-
 def create_item(request, model_name):
-    """
-    Handles creation of a new item by making a POST request to the external API.
-    """
     if request.method == 'POST':
         api_path = API_ENDPOINTS.get(model_name)
         if not api_path:
             return HttpResponse("Invalid model name.", status=400)
 
-        api_url = f"{BASE_API_URL}{api_path}" # POST to the list endpoint for creation
+        api_url = f"{BASE_API_URL}{api_path}"
 
-        # Initialize 'data' as an EMPTY dictionary for explicit population.
-        # This prevents accidental inclusion of unexpected fields from request.POST.
         data = {}
-        files = {} # This will hold the new image file if uploaded
+        files = {}
 
         if model_name == 'product':
-            # --- Populate 'data' with specific fields explicitly from request.POST ---
-            # Basic Text/Number fields (assuming these are always present in the form)
             if 'name' in request.POST:
                 data['name'] = request.POST['name']
             if 'description' in request.POST:
@@ -298,52 +270,63 @@ def create_item(request, model_name):
             if 'discounted_price' in request.POST:
                 data['discounted_price'] = request.POST['discounted_price']
 
-            # Stock handling (convert to int)
             if 'stock' in request.POST:
                 try:
                     data['stock'] = int(request.POST['stock'])
                 except (ValueError, TypeError):
-                    # Handle validation error for stock if needed, or let API handle it
-                    pass
+                    pass # Handle error or set a default
 
-            # --- FIX FOR CATEGORY_ID IS HERE: Send as 'category_id' integer directly ---
             if 'category' in request.POST and request.POST['category']:
                 try:
-                    # The API expects 'category_id' as an integer, not a nested dictionary.
                     data['category_id'] = int(request.POST['category'])
                 except (ValueError, TypeError):
-                    # If category is not a valid integer, return an error
                     return HttpResponse("Invalid category ID provided. Must be a number.", status=400)
             else:
-                # If category is required but not provided in the form, return an error.
-                # This directly addresses the "This field is required." for category_id.
                 return HttpResponse("Category is required for new products. Please select one.", status=400)
 
-            # Is Active (boolean from checkbox)
-            # Checkbox value is 'on' if checked, otherwise not in request.POST
             data['is_active'] = 'is_active' in request.POST
 
-            # created_at: Typically handled by API with auto_now_add.
-            # Remove `data['created_at'] = datetime.datetime.now().isoformat()` unless your API explicitly requires it for creation.
-            # Your serializer has `read_only=True` for `created_at`, so the API should set it.
-
-            # --- Image Handling for NEW items ---
             if 'image' in request.FILES:
                 files['image'] = request.FILES['image']
-                # The 'image' field is NOT added to 'data' when a file is in 'files'.
-                # For new items, if no image is uploaded, the API will typically set it to null/default
-                # because `ImageField(required=False, allow_null=True)` is defined in the serializer.
-                # So, no 'image: ""' is needed here.
 
-        # --- Diagnostic Prints (Check these carefully after running!) ---
+        # --- NEW LOGIC FOR 'customer' (Add new user/customer) ---
+        elif model_name == 'customer':
+            username = request.POST.get('username')
+            email = request.POST.get('email')
+            password = request.POST.get('password')
+            confirm_password = request.POST.get('confirm_password') # This is what HTML sends
+
+            # Basic Validation (already there)
+            if not username or not email or not password or not confirm_password: # Add confirm_password to validation
+                encoded_error = quote("Username, Email, Password, and Confirm Password are required.")
+                return redirect(reverse('Admin:dynamic_dt_overview') +
+                                f"?main_item={model_name}&action_error=true&error_msg={encoded_error}")
+
+            if password != confirm_password:
+                encoded_error = quote("Passwords do not match.")
+                return redirect(reverse('Admin:dynamic_dt_overview') +
+                                f"?main_item={model_name}&action_error=true&error_msg={encoded_error}")
+
+            # Prepare data for API call
+            data['username'] = username
+            data['email'] = email
+            data['password'] = password
+            data['password2'] = confirm_password # <-- ADD THIS LINE to map confirm_password to password2
+            data['first_name'] = request.POST.get('first_name', '')
+            data['last_name'] = request.POST.get('last_name', '')
+            data['phone_number'] = request.POST.get('phone_number', '')
+            data['address'] = request.POST.get('address', '')
+            # The 'register-customers/' API is expected to handle creating both User and Customer profile
+
+        # --- END NEW LOGIC FOR 'customer' ---
+
         print(f"Data being sent to API for {model_name} (Create): {data}")
         print(f"Files being sent to API for {model_name} (Create): {files}")
 
         try:
-            # Send the POST request to your API for creation
             response = requests.post(api_url, data=data, files=files if files else None)
-
             response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+
             return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={model_name}&create_success=true")
 
         except requests.exceptions.RequestException as e:
@@ -383,16 +366,11 @@ def create_item(request, model_name):
             return redirect(reverse('Admin:dynamic_dt_overview') +
                             f"?main_item={model_name}&action_error=true&error_msg={encoded_error}")
     else:
-        # This handles the initial GET request to display the add item form
         return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={model_name}")
 
 
 def update_item(request, model_name, item_id):
-    """
-    Handles updating an existing item by making a POST/PATCH request to the external API.
-    """
     if request.method == 'POST':
-        # --- DIAGNOSTIC PRINT: See raw request.POST content (Keep this for now!) ---
         print(f"RAW request.POST at start of update_item: {request.POST}")
 
         api_path = API_ENDPOINTS.get(model_name)
@@ -401,64 +379,91 @@ def update_item(request, model_name, item_id):
 
         api_url = f"{BASE_API_URL}{api_path}{item_id}/"
 
-        # Initialize 'data' as an EMPTY dictionary for explicit population.
         data = {}
-        files = {} # This will hold the NEW image file if uploaded
+        files = {}
 
         if model_name == 'product':
-            # --- Populate 'data' with specific fields explicitly from request.POST ---
             if 'name' in request.POST:
                 data['name'] = request.POST['name']
             if 'description' in request.POST:
                 data['description'] = request.POST['description']
             if 'original_price' in request.POST:
                 data['original_price'] = request.POST['original_price']
-            if 'discounted_price' in request.POST: # This line was fixed previously for syntax
+            if 'discounted_price' in request.POST:
                 data['discounted_price'] = request.POST['discounted_price']
 
             if 'stock' in request.POST:
                 try:
                     data['stock'] = int(request.POST['stock'])
                 except (ValueError, TypeError):
-                    pass # Or handle this error gracefully
+                    pass
 
             if 'category' in request.POST and request.POST['category']:
                 try:
                     data['category_id'] = int(request.POST['category'])
                 except (ValueError, TypeError):
-                    pass # Or handle this error
+                    pass
 
-            data['is_active'] = 'is_active' in request.POST # Checkbox value
+            data['is_active'] = 'is_active' in request.POST
 
             if 'created_at' in request.POST:
                 data['created_at'] = request.POST['created_at']
 
-
-            # --- SIMPLIFIED AND CORRECTED IMAGE HANDLING LOGIC FOR PRESERVATION ---
-            # This is the most direct and reliable way to handle image preservation
-            # when no new file is uploaded and there's no explicit "clear image" checkbox.
             if 'image' in request.FILES:
-                # Case 1: A new image file was uploaded by the user.
                 files['image'] = request.FILES['image']
-                # The 'image' field is NOT added to 'data' in this case, as it's handled via 'files'.
             else:
-                # Case 2: No new image was uploaded.
-                # In this scenario, we assume the user intends to PRESERVE the existing image.
-                # To achieve preservation with DRF's PATCH, we *must not* include the 'image' field
-                # in the 'data' payload at all.
-                # The `request.POST['image'] = ''` coming from the browser for an empty file input
-                # is effectively ignored by this logic, preventing it from being passed to the API as a clear instruction.
-                pass # By doing nothing here, the 'image' field is omitted, which preserves it.
+                pass
+        elif model_name == 'order':
+            data['total_amount'] = request.POST.get('total_amount')
+            data['status'] = request.POST.get('status')
+            data['payment_status'] = request.POST.get('payment_status')
+            data['payment_method'] = request.POST.get('payment_method')
+            data['shipping_cost'] = request.POST.get('shipping_cost')
+            
+            data['billing_first_name'] = request.POST.get('billing_first_name')
+            data['billing_last_name'] = request.POST.get('billing_last_name')
+            data['billing_email'] = request.POST.get('billing_email')
+            data['billing_phone'] = request.POST.get('billing_phone')
+            data['billing_address_line_1'] = request.POST.get('billing_address_line_1')
+            data['billing_address_line_2'] = request.POST.get('billing_address_line_2')
+            data['billing_city'] = request.POST.get('billing_city')
+            data['billing_state'] = request.POST.get('billing_state')
+            data['billing_zip_code'] = request.POST.get('billing_zip_code')
+            data['billing_country'] = request.POST.get('billing_country')
 
+            data['first_name'] = request.POST.get('first_name')
+            data['last_name'] = request.POST.get('last_name')
+            data['email'] = request.POST.get('email')
+            data['phone'] = request.POST.get('phone')
+            data['address_line_1'] = request.POST.get('address_line_1')
+            data['address_line_2'] = request.POST.get('address_line_2')
+            data['city'] = request.POST.get('city')
+            data['state'] = request.POST.get('state')
+            data['zip_code'] = request.POST.get('zip_code')
+            data['country'] = request.POST.get('country')
 
-        # --- Final Diagnostic Prints for the payload being sent (IMPORTANT to check this!) ---
+            for key, value in list(data.items()):
+                if value == '':
+                    data[key] = None
+
+            if data.get('total_amount'):
+                try:
+                    data['total_amount'] = float(data['total_amount'])
+                except (ValueError, TypeError):
+                    del data['total_amount']
+            if data.get('shipping_cost'):
+                try:
+                    data['shipping_cost'] = float(data['shipping_cost'])
+                except (ValueError, TypeError):
+                    del data['shipping_cost']
+
         print(f"Data being sent to API for {model_name}: {data}")
         print(f"Files being sent to API for {model_name}: {files}")
 
         try:
             response = requests.patch(api_url, data=data, files=files if files else None)
 
-            response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()
             return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={model_name}&update_success=true")
 
         except requests.exceptions.RequestException as e:
@@ -504,50 +509,37 @@ def update_item(request, model_name, item_id):
 
 
 def delete_item(request, model_name, item_id):
-    """
-    Handles deletion of an item by making a DELETE request to the external API.
-    """
     api_path = API_ENDPOINTS.get(model_name)
     if not api_path:
         return HttpResponse("Invalid model name.", status=400)
 
-    # Construct the API URL for the specific item
     api_url = f"{BASE_API_URL}{api_path}{item_id}/"
 
-    # --- Crucial Change: Handle DELETE request ---
     if request.method == 'DELETE':
         try:
-            # Forward the DELETE request to your API
             response = requests.delete(api_url)
-            response.raise_for_status() # Raises HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()
 
-            # If the API returns a success status (e.g., 200 OK, 204 No Content)
-            # Send a successful JSON response back to the frontend JavaScript
-            return JsonResponse({'message': f'{model_name.title()} (ID: {item_id}) deleted successfully.'}, status=204) # 204 No Content is typical for successful DELETE
+            return JsonResponse({'message': f'{model_name.title()} (ID: {item_id}) deleted successfully.'}, status=204)
 
         except requests.exceptions.RequestException as e:
-            # Log the error and the API's response content for debugging
             print(f"API Error deleting {model_name} (ID: {item_id}): {e}")
             error_message = str(e)
             if hasattr(e, 'response') and e.response is not None:
-                print(f"API Response Content: {e.response.text}") # This is vital for debugging API's 400s
+                print(f"API Response Content: {e.response.text}")
                 try:
-                    # Try to parse API's error response as JSON if possible
                     api_error_details = e.response.json()
-                    error_message = api_error_details # Use the detailed API error
+                    error_message = api_error_details
                 except json.JSONDecodeError:
-                    error_message = e.response.text # Fallback to plain text if not JSON
+                    error_message = e.response.text
 
-            # Return a JSON error response with the appropriate status code
             return JsonResponse({'error': error_message}, status=e.response.status_code if hasattr(e, 'response') and e.response is not None else 500)
     else:
-        # If any method other than DELETE is used, return 405 Method Not Allowed
-        # This prevents accidental deletions via GET or other methods.
         return HttpResponse("Invalid request method.", status=405)
 
 
 def export_csv_view(request, link):
-    model_name = link.lower() # Use lower for API lookup
+    model_name = link.lower()
 
     api_path = API_ENDPOINTS.get(model_name)
     if not api_path:
@@ -555,30 +547,22 @@ def export_csv_view(request, link):
 
     api_url = f"{BASE_API_URL}{api_path}"
 
-    # Get search query from request
     search_query = request.GET.get('search', '')
     params = {}
     if search_query:
         params['search'] = search_query
 
-    # For export, fetch ALL items (or handle pagination appropriately if dataset is huge)
-    # For simplicity, we'll try to fetch all items for CSV. DRF usually has a 'limit' parameter or paginator disabled.
-    # We might need to adjust the API to allow fetching all items without pagination for export.
-    # For now, let's assume the API returns all matching results with search.
-    # If the API is paginated by default, you would need to iterate through pages.
     try:
         response = requests.get(api_url, params=params)
         response.raise_for_status()
         api_data = response.json()
 
-        # Check if api_data is a list or a paginated response
-        items_data = api_data.get('results', api_data) # Adjust based on actual API response format
+        items_data = api_data.get('results', api_data)
 
     except requests.exceptions.RequestException as e:
         print(f"API Error fetching {model_name} data for CSV export: {e}")
         return HttpResponse(f"Error fetching data for export: {e}", status=500)
 
-    # Determine the local model class for field names
     model = apps.get_model('Admin', model_name.capitalize()) if model_name not in ['product', 'category'] else (PetStoreProduct if model_name == 'product' else Category)
     if model_name == 'orderitem' and not model:
         model = apps.get_model('PetStore', 'OrderItem')
@@ -596,9 +580,6 @@ def export_csv_view(request, link):
         row = []
         for field_name in field_names:
             value = item_dict.get(field_name, '')
-            # If FKs are returned as IDs, you might want to fetch their names for the CSV
-            # This would require additional API calls or a more complex serializer in DRF.
-            # For simplicity, just use the value as is.
             row.append(str(value))
         writer.writerow(row)
     return response
@@ -682,9 +663,6 @@ def delete_filter_view(request, link, filter_id):
     return redirect(reverse('Admin:dynamic_dt_overview') + f"?main_item={main_item}&category={category}")
 
 def model_api(request, model_name):
-    # This function is now redundant as we are using DRF ViewSets
-    # and the Admin views are clients of those ViewSets.
-    # You can remove this function if it's not explicitly used elsewhere.
     try:
         model = apps.get_model('Admin', model_name.capitalize())
         if model_name.lower() == 'product':
@@ -709,7 +687,6 @@ def charts(request):
     context['segment'] = 'charts'
     context['page_title'] = "Sales & Product Charts"
 
-    # For charts, consider fetching data from specific API endpoints tailored for analytics
     products_for_chart = PetStoreProduct.objects.all().values('name', 'original_price')
     products_data = list(products_for_chart)
     products_json_string = json.dumps(products_data)
