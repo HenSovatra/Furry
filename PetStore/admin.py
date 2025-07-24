@@ -78,3 +78,26 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderItemInline] 
 
 
+class FeedbackImageInline(admin.TabularInline):
+    model = FeedbackImage
+    extra = 0 # Don't show extra empty forms by default
+    max_num = 5 # Max images per feedback entry in admin
+    can_delete = False # For simplicity, prevent deletion from the inline for now
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user_display', 'email', 'subject', 'submitted_at')
+    list_filter = ('submitted_at', 'user') # Allow filtering by submission date and user
+    search_fields = ('message', 'subject', 'user__username', 'email') # Allow searching
+    inlines = [FeedbackImageInline] # Include the FeedbackImageInline
+
+    def user_display(self, obj):
+        # Custom display for the user in the list view
+        return obj.user.username if obj.user else 'Anonymous'
+    user_display.short_description = 'User' # Column header name
+
+@admin.register(FeedbackImage)
+class FeedbackImageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'feedback', 'image', 'uploaded_at')
+    list_filter = ('uploaded_at',)
+    search_fields = ('feedback__subject', 'feedback__message')

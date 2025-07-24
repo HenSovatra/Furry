@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from decimal import Decimal
 from django.conf import settings
 import decimal
-
+User = get_user_model()
 class MenuItem(models.Model):
     title = models.CharField(max_length=100, help_text="The text displayed in the navigation bar.")
     url = models.CharField(
@@ -301,3 +301,38 @@ class OrderItem(models.Model):
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     def __str__(self):
         return f"{self.quantity} x {self.product.name} in Order {self.order.id}"
+    
+class Feedback(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                             help_text="The user who submitted the feedback (if logged in).")
+    email = models.EmailField(max_length=255, blank=True, null=True,
+                              help_text="Email of the user if not logged in or prefers to provide it.")
+    subject = models.CharField(max_length=255, blank=True, null=True,
+                               help_text="Optional subject for the feedback.")
+    message = models.TextField(help_text="The main feedback message.")
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Feedback"
+        verbose_name_plural = "Feedback"
+        ordering = ['-submitted_at'] # Order by newest first
+
+    def __str__(self):
+        # Display user or email for easy identification in admin/logs
+        submitter = self.user.username if self.user else self.email
+        if not submitter:
+            submitter = 'Anonymous'
+        return f"Feedback from {submitter} - {self.submitted_at.strftime('%Y-%m-%d %H:%M')}"
+
+class FeedbackImage(models.Model):
+    # Link each image to a specific Feedback entry
+    feedback = models.ForeignKey(Feedback, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='feedback_images/') # Images will be saved in media/feedback_images/
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Feedback Image"
+        verbose_name_plural = "Feedback Images"
+
+    def __str__(self):
+        return f"Image for Feedback #{self.feedback.id}"

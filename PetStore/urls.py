@@ -3,6 +3,7 @@
 from django.urls import path
 from . import views # Import views from the current app
 from django.shortcuts import render
+from .views import FeedbackView # Import the FeedbackView class
 app_name = 'PetStore' 
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path('order-confirmation/<int:order_id>/', views.order_confirmation_view, name='order_confirmation_with_id'), 
     path('register/', render, {'template_name': 'register.html'}, name='register_html'),
     path('login/', render, {'template_name': 'login.html'}, name='login_html'),# Optional: for specific order
+    path('feedback/',  views.FeedbackView, name='feedback'),
 ]

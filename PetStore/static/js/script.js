@@ -580,7 +580,99 @@
         });
     };
 
+    let mySwiper = null; // Declare a variable to hold the Swiper instance
 
+    function loadFeedbackSwiper() {
+        const swiperWrapper = $('#swiper-wrapper-content');
+        const feedbackLoadingIndicator = $('#feedback-loading-indicator');
+        const noFeedbackMessage = $('#no-feedback-message');
+        const feedbackLoadError = $('#feedback-load-error');
+        const feedbackSwiper = $('#feedbackSwiper'); // The main Swiper container
+
+        // Show loading indicator, hide other states
+        feedbackLoadingIndicator.removeClass('d-none');
+        swiperWrapper.empty(); // Clear previous slides
+        noFeedbackMessage.addClass('d-none');
+        feedbackLoadError.addClass('d-none');
+        feedbackSwiper.addClass('d-none'); // Hide Swiper until populated
+
+        // Destroy existing Swiper instance if it exists to prevent re-initialization issues
+        if (mySwiper) {
+            mySwiper.destroy(true, true); // true, true for clean destroy
+            mySwiper = null;
+        }
+
+        $.ajax({
+            url: "/api/feedback/", // API endpoint to get feedback
+            type: 'GET',
+            success: function(data) {
+                feedbackLoadingIndicator.addClass('d-none'); // Hide loading indicator
+
+                if (data.length === 0) {
+                    noFeedbackMessage.removeClass('d-none'); // Show 'no feedback' message
+                    return; // Exit if no data
+                }
+
+                // Populate Swiper Wrapper with feedback data
+                data.forEach(feedback => {
+                    // Generate HTML for feedback images
+                    const imagesHtml = feedback.images.map(img => `
+                        <img src="${img.image}" class="img-fluid rounded me-2 mb-2" alt="Feedback Image" style="max-height: 100px; object-fit: cover;">
+                    `).join('');
+
+                    // Create the Swiper slide HTML
+                    const swiperSlide = `
+                        <div class="swiper-slide">
+                            <div class="card position-relative text-left p-5 border-light shadow-sm rounded-3 h-100 d-flex flex-column">
+                                <blockquote>"${feedback.message}"</blockquote>
+                                <h5 class="mt-auto fw-normal">${feedback.user_display}</h5>
+                                ${feedback.email ? `<div class="text-muted small">${feedback.email}</div>` : ''}
+                                <div class="text-muted small">${new Date(feedback.submitted_at).toLocaleDateString()}</div>
+                                ${imagesHtml ? `<div class="mt-3 image-preview-container">${imagesHtml}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    swiperWrapper.append(swiperSlide); // Add slide to Swiper wrapper
+                });
+
+                feedbackSwiper.removeClass('d-none'); // Show the Swiper container now that it has content
+
+                // Initialize Swiper AFTER content is loaded
+        mySwiper = new Swiper('#feedbackSwiper', {
+                // ... (existing parameters) ...
+                slidesPerView: 1,
+                spaceBetween: 30,
+                loop: true,
+
+                // Add this line:
+                autoHeight: true, // Enable auto height for the Swiper container based on current slide
+
+                // Pagination (dots)
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+
+                // Navigation arrows
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+
+                // Autoplay (optional)
+                autoplay: {
+                    delay: 5000,
+                    disableOnInteraction: false,
+                },
+            });
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading feedback:', xhr.responseText);
+                feedbackLoadingIndicator.addClass('d-none'); // Hide loading
+                feedbackLoadError.removeClass('d-none'); // Show error message
+            }
+        });
+    }
     var fetchAndRenderProducts = function() {
         const $productListContainer = $('#product-list-container');
         // Display a loading message while fetching data
@@ -679,6 +771,7 @@
         fetchAndRenderCartDetails();
         fetchAndRenderProducts();
         initCartItemControls(); 
+        loadFeedbackSwiper(); // Load feedback swiper
     });
 
 })(jQuery);

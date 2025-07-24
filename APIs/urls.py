@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from rest_framework.routers import DefaultRouter
-from .views import RegisteredCustomerAPIView
+from .views import RegisteredCustomerAPIView, get_feedback_api, FeedbackAPIView
 app_name = 'APIs' 
 
 urlpatterns = [
@@ -18,6 +18,10 @@ urlpatterns = [
     path('logout/', views.logout_api, name='api-logout'),
     path('order-history/', views.order_history_api, name='order_history_api'),
     path('register-customers/', RegisteredCustomerAPIView.as_view(), name='register-customers'),
+    path('products-category/<int:category_id>/', views.products_by_category_api, name='api_products_by_category'),
+    path('feedback/submit/', FeedbackAPIView.as_view(), name='feedback_submit_api'), # For POST
+    path('feedback/', get_feedback_api, name='api_get_feedback'), # For GET (to retrieve all feedback)
+
 ]
 
 

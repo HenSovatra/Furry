@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.db import transaction
 from rest_framework.decorators import authentication_classes
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
-
+from .forms import FeedbackForm
 
 def navbar(request):
     menu_items = MenuItem.objects.filter(is_active=True, parent__isnull=True).order_by('order')
@@ -22,8 +22,11 @@ def navbar(request):
     return display_menu_items
 
 def CategoryView(request):
+    top_level_categories = Category.objects.filter(parent__isnull=True, is_active=True).order_by('order').prefetch_related('subcategories')
+   
     context = {
         'main_menu_items': navbar(request),
+        'top_level_categories': top_level_categories,
     }
     return render(request, 'category.html', context) 
 
@@ -33,6 +36,18 @@ def HistoryView(request):
     }
     return render(request, 'history.html', context)     
 
+def FeedbackView(request):
+    template_name = 'feedback.html' # This should match your template file name
+
+    form = FeedbackForm() # Initialize the main feedback form
+    # We don't need to pass a formset for rendering the initial page,
+    # as images are handled by a single file input in JS.
+    context = {
+        'form': form,
+        'main_menu_items': navbar(request), # If navbar() is a function you have, include it
+        # Pass CSRF token for AJAX submission directly if needed, though Django templates handle it
+    }
+    return render(request, template_name, context)
 
 def HomeView (request):
     slides = Slide.objects.filter(is_active=True).order_by('order')

@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from PetStore.models import Product , Category, Cart, CartItem, Order, OrderItem
+from PetStore.models import Product , Category, Cart, CartItem, Order, OrderItem,Feedback,FeedbackImage
 from Admin.models import Customer, Billing
 from .serializers import *
 from django.shortcuts import get_object_or_404
@@ -21,10 +21,14 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from rest_framework import generics
 
+from django.views import View
 from .serializers import RegisteredCustomerSerializer
 from rest_framework.permissions import AllowAny
+from PetStore.forms import FeedbackForm,FeedbackImageFormSet
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Prefetch
 
-from django_filters.rest_framework import DjangoFilterBackend # New import for DjangoFilterBackend
+from django.http import JsonResponse
 
 logger = logging.getLogger(__name__) # Initialize logger for this module
 
@@ -534,3 +538,98 @@ class RegisteredCustomerAPIView(generics.ListCreateAPIView):
         return RegisteredCustomerSerializer # Use RegisteredCustomerSerializer for listing (GET)
 
     permission_classes = [AllowAny]
+
+
+@api_view(['GET'])
+def products_by_category_api(request, category_id):
+    """
+    API endpoint to get products by category ID.
+    Handles both direct category products and products in its subcategories.
+    """
+    try:
+        category = get_object_or_404(Category, id=category_id)
+        products = Product.objects.filter(category=category, is_active=True)
+        if category.subcategories.exists():
+            for subcat in category.subcategories.filter(is_active=True):
+                products = products | Product.objects.filter(category=subcat, is_active=True)
+
+        product_data = []
+        for product in products.distinct(): # Use distinct() if you combined querysets
+            price = 0
+            image_url = request.build_absolute_uri(product.image.url) if product.image else ''
+            print(image_url)
+            if product.discounted_price is not None:
+                price = product.discounted_price
+            else:
+                price = product.original_price
+            product_data.append({
+                'id': product.id,
+                'name': product.name,
+                'description': product.description,
+                'price': float(price), # Convert Decimal to float for JSON
+                'image': image_url, # Get full URL
+            })
+
+        return Response(product_data)
+    except Exception as e:
+        print(f"Error fetching products by category {category_id}: {e}")
+        return Response({'error': str(e)}, status=500)
+    
+
+
+class FeedbackAPIView(View):
+    def post(self, request, *args, **kwargs):
+        # Django automatically handles multipart/form-data for file uploads.
+        # request.POST will contain text fields, request.FILES will contain files.
+
+        form = FeedbackForm(request.POST)
+        # Initialize the formset with POST data and FILES data
+        # 'images' is the prefix for the formset, based on related_name in FeedbackImage model
+        formset = FeedbackImageFormSet(request.POST, request.FILES, prefix='images')
+
+        if form.is_valid() and formset.is_valid():
+            feedback = form.save(commit=False)
+            if request.user.is_authenticated:
+                feedback.user = request.user # Link feedback to the logged-in user
+            feedback.save() # Save the main feedback object first
+
+            # Save the images, linking them to the newly created feedback object
+            for form_in_formset in formset:
+                if form_in_formset.cleaned_data.get('image'): # Check if an image file was actually provided
+                    image_instance = form_in_formset.save(commit=False)
+                    image_instance.feedback = feedback # Link image to the saved feedback
+                    image_instance.save()
+
+            return JsonResponse({'message': 'Feedback submitted successfully!', 'status': 'success'}, status=200)
+        else:
+            # If validation fails, compile error messages from both form and formset
+            errors = {}
+            if form.errors:
+                errors.update(form.errors.as_json()) # Get general form errors
+            if formset.errors:
+                formset_errors_list = []
+                for i, fs_form in enumerate(formset):
+                    if fs_form.errors:
+                        # Append errors for each image form in the formset
+                        formset_errors_list.append(f"Image {i+1}: {fs_form.errors.as_json()}")
+                errors['images'] = formset_errors_list # Assign all image-related errors under 'images' key
+
+            return JsonResponse({'message': 'Validation failed', 'status': 'error', 'errors': errors}, status=400)
+
+# --- 3. API View to Get All Feedback (for Frontend Display) ---
+@api_view(['GET'])
+def get_feedback_api(request):
+    """
+    API endpoint to retrieve all submitted feedback for display.
+    Includes associated images and user/email information.
+    """
+    # Fetch all Feedback objects, order by newest first
+    # Use Prefetch to get all related images efficiently in a single query
+    feedback_queryset = Feedback.objects.all().order_by('-submitted_at').prefetch_related(
+        Prefetch('images', queryset=FeedbackImage.objects.all())
+    )
+
+    # Serialize the queryset using the FeedbackSerializer
+    serializer = FeedbackSerializer(feedback_queryset, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+

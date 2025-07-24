@@ -702,7 +702,7 @@
             const searchValue = searchInput.value.toLowerCase().trim(); // Get value, convert to lowercase, remove leading/trailing spaces
 
             // Use a more specific selector for the table body to avoid conflicts
-            const tableBody = document.querySelector('.card-body.px-0.pt-0.pb-2 table tbody');
+            const tableBody = document.getElementById('products-table');
             if (!tableBody) {
                 console.error('Error: Table body element not found. Check the HTML structure: .card-body.px-0.pt-0.pb-2 table tbody');
                 return; // Stop if the table body isn't found

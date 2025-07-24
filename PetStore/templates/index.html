@@ -126,7 +126,7 @@
                         {% else %}
                             {# This is a regular top-level category without sub-menus #}
                             <li class="nav-item">
-                                <a href="{{ category.url }}" class="nav-link d-flex align-items-center gap-3 p-2">
+                                <a href="/category/?id={{ category.id }}" class="nav-link d-flex align-items-center gap-3 p-2">
                                     {% if category.icon_id %}
                                         <svg width="24" height="24" viewBox="0 0 24 24">
                                             <use xlink:href="#{{ category.icon_id }}"></use>
@@ -172,7 +172,7 @@
     </div>
   </section>
 
-  <section id="customers-reviews" class="position-relative section-padding jarallax"
+  <section id="customers-reviews" class="position-relative section-padding jarallax" 
     style="background-image: url({% static 'images/banner-image-bg.jpg' %}); background-size: cover; background-repeat: no-repeat; background-position: center;">
     <div class="container offset-md-3 col-md-6 ">
       <div class="position-absolute top-50 end-0 pe-0 pe-xxl-5 me-0 me-xxl-5 testimonial-button-next">
@@ -188,34 +188,37 @@
       <div class="section-title mb-4 text-center">
         <h2 class="section-title">Customers reviews</h2>
       </div>
-      <div class="swiper testimonial-swiper ">
-        <div class="swiper-wrapper">
-          <div class="swiper-slide">
-            <div class="card position-relative text-left p-5 border-light shadow-sm rounded-3">
-              <blockquote>"This pet shop has everything my furry friend needs! The quality of the products is amazing, and the staff is so helpful. Highly recommended!"</blockquote>
-              <h5 class="mt-1 fw-normal">Emma R., Dog Owner</h5>
+      <div id="feedback-swiper-container" class="mb-5">
+            <!-- Loading indicator for feedback -->
+            <div class="text-center text-muted p-5" id="feedback-loading-indicator">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading feedback...</span>
+                </div>
+                <p class="mt-2">Loading user feedback...</p>
             </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="card position-relative text-left p-5 border-light shadow-sm rounded-3">
-              <blockquote>"I found the perfect food and accessories for my cat here. The prices are great, and the delivery was super fast!"</blockquote>
-              <h5 class="mt-1 fw-normal">Mark T., Cat Lover</h5>
+
+            <!-- Swiper container (initially hidden) -->
+            <div class="swiper testimonial-swiper d-none" id="feedbackSwiper">
+                <div class="swiper-wrapper" id="swiper-wrapper-content">
+                    <!-- Swiper slides (feedback items) will be injected here by JavaScript -->
+                </div>
+                <!-- Add Pagination -->
+                <div class="swiper-pagination"></div>
+
+                <!-- Add Navigation (Prev/Next buttons) -->
+                <div class="swiper-button-next"></div>
+                <div class="swiper-button-prev"></div>
             </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="card position-relative text-left p-5 border-light shadow-sm rounded-3">
-              <blockquote>"A fantastic place for pet owners! Their selection of toys and treats keeps my puppy entertained and happy."</blockquote>
-              <h5 class="mt-1 fw-normal">Sophia L., Pet Parent</h5>
+
+            <!-- Message if no feedback is found -->
+            <div id="no-feedback-message" class="text-center text-muted p-5 d-none">
+                No feedback submitted yet. Be the first!
             </div>
-          </div>
-          <div class="swiper-slide">
-            <div class="card position-relative text-left p-5 border-light shadow-sm rounded-3">
-              <blockquote>“I love shopping here for my rabbit! They have unique and high-quality pet products that I can’t find anywhere else.”</blockquote>
-              <h5 class="mt-1 fw-normal">Daniel G., Rabbit Enthusiast</h5>
+            <!-- Error message if feedback loading fails -->
+            <div id="feedback-load-error" class="alert alert-danger d-none" role="alert">
+                Failed to load feedback. Please try again later.
             </div>
-          </div>
         </div>
-      </div>
     </div>
   </section>
   

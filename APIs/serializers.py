@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from Admin.models import Order, OrderItem 
 from django.db.models import Sum
 # Explicitly import models from PetStore.models with an alias for Product
-from PetStore.models import Product as PetStoreProduct, Category, Cart, CartItem, Order, OrderItem
+from PetStore.models import Product as PetStoreProduct, Category, Cart, CartItem, Order, OrderItem, Feedback, FeedbackImage
 # Explicitly import models from Admin.models
 from Admin.models import Customer, Billing
 
@@ -187,3 +187,28 @@ class RegisteredCustomerSerializer(serializers.ModelSerializer):
             }
         return None
     
+class FeedbackImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeedbackImage
+        fields = ['image'] # Only need the image URL for display in the API
+
+# Serializer for Feedback objects, including nested images
+class FeedbackSerializer(serializers.ModelSerializer):
+    # 'images' here refers to the related_name='images' on the ForeignKey in FeedbackImage model
+    images = FeedbackImageSerializer(many=True, read_only=True)
+    # Custom field to display username or email
+    user_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Feedback
+        # Fields to include in the API response for Feedback objects
+        fields = ['id', 'user_display', 'email', 'subject', 'message', 'images', 'submitted_at']
+        # These fields are read-only and won't be expected in API input
+        read_only_fields = ['id', 'user_display', 'submitted_at']
+
+    def get_user_display(self, obj):
+        # Method to determine how the user is displayed
+        if obj.user:
+            return obj.user.username # If a user is linked, show their username
+        return obj.email or 'Anonymous'
+
