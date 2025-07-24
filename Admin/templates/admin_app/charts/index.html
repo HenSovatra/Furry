@@ -1,14 +1,16 @@
 {% extends "layouts/base.html" %}
 {% load static %}
 
-{% block title %} {% if page_title %} {{ page_title }} {% else %} Dynamic DataTables {% endif %} {% endblock title %} 
+{% block title %}Charts{% endblock title %}
+
+{% block breadcrumb_page %}Dashboard{% endblock breadcrumb_page %}
+{% block breadcrumb_title %}Charts & Bar{% endblock breadcrumb_title %}
 
 {% block content %}
 
 <div class="container-fluid py-4">
     <div class="row">
-        <!-- Available Routes Section -->
-        <div class="col-sm-12 mb-4"> {# Added mb-4 for spacing #}
+        <div class="col-sm-12 mb-4">
             <div class="card">
                 <div class="card-header">
                     <h5>
@@ -20,15 +22,16 @@
                         {% for link in routes %}
                             <li>
                                 <a href="{% url "Admin:model_dt" link %}">{{ link }}</a>
-                            </li>    
+                            </li>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
         </div>
 
-        <!-- Charts Section - Added Here -->
-        <div class="col-sm-12 col-md-6 mb-4"> {# Added mb-4 for spacing #}
+        
+        
+        <div class="col-sm-12 col-md-5 mb-4"> {# Adjusted col size to fit next to the new chart #}
             <div class="card">
                 <div class="card-header">
                     <h5>Bar Chart</h5>
@@ -38,7 +41,7 @@
                 </div>
             </div>
         </div>
-
+        
         <div class="col-sm-12 col-md-6 mb-4"> {# Added mb-4 for spacing #}
             <div class="card">
                 <div class="card-header">
@@ -50,7 +53,63 @@
             </div>
         </div>
     </div>
-</div> 
+</div>
+
+<div class="col-lg-7 mb-lg-0 mb-4">
+    <div class="card z-index-2 h-100">
+        <div class="card-header pb-0 pt-3 bg-transparent">
+            <h6 class="text-capitalize">Product Overview</h6>
+            <p class="text-sm mb-0">
+                <i class="fa fa-arrow-up text-success"></i>
+                <span class="font-weight-bold">{{ product_growth }}% more</span> in
+                product growth
+            </p>
+
+            {# --- NEW UI FOR CHART PERIOD SELECTION --- #}
+            <div
+                class="btn-group btn-group-sm mt-3"
+                role="group"
+                aria-label="Chart Period Selection"
+            >
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary chart-period-btn active"
+                    data-period="daily"
+                >
+                    Daily
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary chart-period-btn"
+                    data-period="weekly"
+                >
+                    Weekly
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary chart-period-btn"
+                    data-period="monthly"
+                >
+                    Monthly
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary chart-period-btn"
+                    data-period="yearly"
+                >
+                    Yearly
+                </button>
+            </div>
+            {# --- END NEW UI --- #}
+        </div>
+        <div class="card-body p-3">
+            <div class="chart">
+                <canvas id="chart-line" class="chart-canvas" height="170"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 {% endblock content %}
 
@@ -59,56 +118,186 @@
 
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
-    // Dummy data for demonstration purposes
-    var products = [
-      { fields: { name: 'Pug', price: 150 } },
-      { fields: { name: 'Bulldog', price: 220 } },
-      { fields: { name: 'Beagle', price: 180 } },
-      { fields: { name: 'Rottweiler', price: 250 } },
-      { fields: { name: 'Labrador', price: 300 } }
-    ];
-
-    var names = products.map(p => p.fields.name);
-    var prices = products.map(p => p.fields.price);
-
-    // Bar Chart Options
-    var barOptions = {
-      chart: { type: 'bar', height: 350, toolbar: { show: false } },
-      series: [{ name: 'Price', data: prices }],
-      xaxis: { categories: names },
-      plotOptions: {
-        bar: {
-          borderRadius: 5,
-          horizontal: false,
+    var products = JSON.parse('{{ products_for_chart|safe }}');
+    
+    var productNames = products.map(p => p.name);
+    var productPrices = products.map(p => p.original_price);
+    var productQuantities = products.map(p => p.total_quantity);
+    
+    // Bar Chart for Most Bought Products
+    var optionsBar = {
+        chart: {
+            type: 'bar',
+            height: 350
+        },
+        title: {
+            text: 'Top Selling Products',
+            align: 'center',
+            style: {
+                fontSize: '20px'
+            }
+        },
+        series: [{
+            name: 'Total Bought',
+            data: productQuantities
+        }],
+        xaxis: {
+            categories: productNames
         }
-      },
-      dataLabels: { enabled: false },
-      tooltip: { enabled: true },
-      colors: ['#4CAF50'], // Example color
-      grid: { show: false }
     };
-    var barChart = new ApexCharts(document.querySelector("#bar-chart"), barOptions);
-    barChart.render();
 
-    // Pie Chart Options
-    var pieOptions = {
-      chart: { type: 'pie', height: 350, toolbar: { show: false } },
-      series: prices,
-      labels: names,
-      responsive: [{
-        breakpoint: 480,
+    var chartBar = new ApexCharts(document.querySelector("#bar-chart"), optionsBar);
+    chartBar.render();
+
+    // Pie Chart for Product Prices
+    var optionsPie = {
+        chart: {
+            type: 'pie',
+            height: 350
+        },
+        title: {
+            text: 'Product Price Distribution',
+            align: 'center',
+            style: {
+                fontSize: '20px'
+            }
+        },
+        series: productPrices,
+        labels: productNames
+    };
+
+    var chartPie = new ApexCharts(document.querySelector("#pie-chart"), optionsPie);
+    chartPie.render();
+</script>
+
+{# Chart.js for Product Overview Line Chart #}
+<script src="{% static 'assets/js/plugins/chartjs.min.js' %}"></script>
+<script>
+    // Store all aggregated data received from Django
+    const allChartData = {
+        daily: {{ daily_product_data|safe }},
+        weekly: {{ weekly_product_data|safe }},
+        monthly: {{ monthly_product_data|safe }},
+        yearly: {{ yearly_product_data|safe }}
+    };
+
+    let productChart; // Declare a variable to hold the chart instance
+
+    // Function to update the chart data
+    function updateProductChart(period) {
+        const dataForPeriod = allChartData[period];
+        const labels = dataForPeriod.map(item => item.label);
+        const values = dataForPeriod.map(item => item.value);
+
+        // Update chart data and labels
+        productChart.data.labels = labels;
+        productChart.data.datasets[0].data = values;
+        productChart.data.datasets[0].label = `Total Products (${period.charAt(0).toUpperCase() + period.slice(1)})`; // Update dataset label
+
+        productChart.update(); // Re-render the chart
+    }
+
+    // --- Chart Initialization ---
+    var ctx1 = document.getElementById("chart-line").getContext("2d");
+
+    var gradientStroke1 = ctx1.createLinearGradient(0, 230, 0, 50);
+    gradientStroke1.addColorStop(1, "rgba(94, 114, 228, 0.2)");
+    gradientStroke1.addColorStop(0.2, "rgba(94, 114, 228, 0.0)");
+    gradientStroke1.addColorStop(0, "rgba(94, 114, 228, 0)");
+
+    // Initialize the chart with daily data by default
+    const initialData = allChartData.daily;
+    const initialLabels = initialData.map(item => item.label);
+    const initialValues = initialData.map(item => item.value);
+
+    productChart = new Chart(ctx1, {
+        type: "line",
+        data: {
+            labels: initialLabels,
+            datasets: [
+                {
+                    label: "Total Products (Daily)", // Initial label
+                    tension: 0.4,
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    borderColor: "#5e72e4",
+                    backgroundColor: gradientStroke1,
+                    borderWidth: 3,
+                    fill: true,
+                    data: initialValues,
+                    maxBarThickness: 6,
+                },
+            ],
+        },
         options: {
-          chart: { width: 200 },
-          legend: { position: 'bottom' }
-        }
-      }],
-      dataLabels: { enabled: true },
-      tooltip: { enabled: true },
-    };
-    var pieChart = new ApexCharts(document.querySelector("#pie-chart"), pieOptions);
-    pieChart.render();
-  });
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false,
+                },
+            },
+            interaction: {
+                intersect: false,
+                mode: "index",
+            },
+            scales: {
+                y: {
+                    grid: {
+                        drawBorder: false,
+                        display: true,
+                        drawOnChartArea: true,
+                        drawTicks: false,
+                        borderDash: [5, 5],
+                    },
+                    ticks: {
+                        display: true,
+                        padding: 10,
+                        color: "#fbfbfb",
+                        font: {
+                            size: 11,
+                            family: "Open Sans",
+                            style: "normal",
+                            lineHeight: 2,
+                        },
+                    },
+                },
+                x: {
+                    grid: {
+                        drawBorder: false,
+                        display: false,
+                        drawOnChartArea: false,
+                        drawTicks: false,
+                        borderDash: [5, 5],
+                    },
+                    ticks: {
+                        display: true,
+                        color: "#ccc",
+                        padding: 20,
+                        font: {
+                            size: 11,
+                            family: "Open Sans",
+                            style: "normal",
+                            lineHeight: 2,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    // Event listeners for period selection buttons
+    document.querySelectorAll('.chart-period-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove 'active' from all buttons
+            document.querySelectorAll('.chart-period-btn').forEach(btn => btn.classList.remove('active'));
+            // Add 'active' to the clicked button
+            this.classList.add('active');
+            // Update chart with the selected period
+            updateProductChart(this.dataset.period);
+        });
+    });
+
 </script>
 
 {% endblock extra_js %}

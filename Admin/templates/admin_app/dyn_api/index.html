@@ -10,42 +10,138 @@
 
 <div class="container-fluid py-4">
     <div class="row">
-        <div class="col-sm-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Available API Endpoints</h5>
-                    <p>Interact with your data programmatically. For full documentation, refer to your API docs.</p>
+        <div class="col-lg-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-gradient-primary text-white p-3">
+                    <h5 class="mb-0 text-white">Available API Endpoints</h5>
+                    <p class="mb-0 opacity-8">Explore and interact with your data programmatically. For comprehensive details, refer to the full API documentation.</p>
+                </div>
+                <div class="card-body px-0 pt-0 pb-2">
+                    <div class="table-responsive p-0">
+                        <table class="table align-items-center mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-3">Endpoint</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Methods</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Actions</th>
+                                    <th class="text-secondary opacity-7"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for route in routes %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <div class="d-flex px-2 py-1">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm"><code>{{ route.url }}</code></h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle text-center text-sm">
+                                        <span class="badge badge-sm bg-gradient-success">GET</span>
+                                        {% if route.supports_post %}
+                                        <span class="badge badge-sm bg-gradient-info">POST</span>
+                                        {% endif %}
+                                        {% if route.supports_put %}
+                                        <span class="badge badge-sm bg-gradient-warning">PUT</span>
+                                        {% endif %}
+                                        {% if route.supports_delete %}
+                                        <span class="badge badge-sm bg-gradient-danger">DELETE</span>
+                                        {% endif %}
+                                        {# You'd need to pass these boolean flags from your Django view #}
+                                    </td>
+                                    <td class="align-middle text-center">
+                                        <a href="{{ route.url }}" target="_blank" class="btn btn-sm bg-gradient-primary mb-0 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Open endpoint in new tab">
+                                            <i class="fas fa-external-link-alt"></i> Test GET
+                                        </a>
+                                        <button class="btn btn-sm bg-gradient-secondary mb-0" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample_{{ forloop.counter }}" aria-expanded="false" aria-controls="collapseExample_{{ forloop.counter }}">
+                                            <i class="fas fa-code"></i> Details & Test
+                                        </button>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="collapse" id="collapseExample_{{ forloop.counter }}">
+                                            <div class="card card-body bg-light mx-3 mb-3">
+                                                <h6 class="text-dark">Endpoint Details:</h6>
+                                                <p class="text-sm text-muted"><strong>Description:</strong> {{ route.description|default:"No description available." }}</p>
+                                                {# You would need to pass `route.description` from your Django view #}
+                                                <p class="text-sm text-muted"><strong>Example Response:</strong> (Click "Test GET" above or "Try it out!" below)</p>
+                                                <div class="form-group mb-3">
+                                                    <label for="get_url_{{ forloop.counter }}">Test GET Request:</label>
+                                                    <div class="input-group">
+                                                        <input type="text" id="get_url_{{ forloop.counter }}" class="form-control form-control-sm" value="{{ route.url }}" readonly>
+                                                        <button class="btn btn-outline-primary btn-sm" type="button" onclick="testApiEndpoint('{{ route.url }}', 'result_{{ forloop.counter }}')">Try it out!</button>
+                                                    </div>
+                                                </div>
+                                                <pre><code class="language-json" id="result_{{ forloop.counter }}">No result yet.</code></pre>
+
+                                                {% if route.supports_post %}
+                                                <h6 class="text-dark mt-4">Example POST Request:</h6>
+                                                <p class="text-sm text-muted">Modify the JSON body and click "Send POST" to test.</p>
+                                                <div class="form-group mb-3">
+                                                    <label for="post_body_{{ forloop.counter }}">Request Body (JSON):</label>
+                                                    <textarea id="post_body_{{ forloop.counter }}" class="form-control" rows="5">{
+    "key": "value",
+    "another_key": "another_value"
+}</textarea>
+                                                </div>
+                                                <button class="btn btn-outline-info btn-sm mb-3" type="button" onclick="testPostEndpoint('{{ route.url }}', 'post_body_{{ forloop.counter }}', 'post_result_{{ forloop.counter }}', '{% csrf_token %}')">Send POST</button>
+                                                <pre><code class="language-json" id="post_result_{{ forloop.counter }}">No result yet.</code></pre>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient-dark text-white p-3">
+                    <h5 class="mb-0 text-white">Example Usage (JavaScript Fetch API)</h5>
                 </div>
                 <div class="card-body">
-                    <ul class="list-group">
-                        {% for route in routes %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <code>/admin/dynamic-api/{{ route }}/</code>
-                                <a href="{% url 'Admin:model_api' model_name=route %}" target="_blank" class="btn btn-sm btn-info">Test GET</a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                    <div class="mt-4">
-                        <h6>Example Usage (JavaScript Fetch API)</h6>
-                        <pre><code class="language-javascript">
+                    <pre><code class="language-javascript">
+// Example GET request for products
 fetch('/admin/dynamic-api/products/')
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch(error => console.error('Error:', error));
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => console.log('GET Success:', data))
+    .catch(error => console.error('GET Error:', error));
 
-// Example POST request
+// Example POST request for products
+// Remember to replace 'YOUR_CSRF_TOKEN_HERE' with an actual CSRF token
+// Django provides it via the {% csrf_token %} template tag or a cookie.
 fetch('/admin/dynamic-api/products/', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': 'YOUR_CSRF_TOKEN_HERE', // Get this from Django's csrf_token tag
+        'X-CSRFToken': 'YOUR_CSRF_TOKEN_HERE', // Get this from Django's csrf_token tag or a cookie
     },
     body: JSON.stringify({ name: 'New Product', price: 99.99, stock: 100 })
 })
-.then(response => response.json())
-.then(data => console.log(data));
-                        </code></pre>
-                    </div>
+.then(response => {
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+})
+.then(data => console.log('POST Success:', data))
+.catch(error => console.error('POST Error:', error));
+                    </code></pre>
                 </div>
             </div>
         </div>
@@ -53,3 +149,61 @@ fetch('/admin/dynamic-api/products/', {
 </div>
 
 {% endblock content %}
+
+{% block javascripts %}
+  {{ block.super }}
+  <script>
+    // Function to test GET endpoints
+    async function testApiEndpoint(url, resultElementId) {
+        const resultElement = document.getElementById(resultElementId);
+        resultElement.textContent = 'Loading...';
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            resultElement.textContent = JSON.stringify(data, null, 2);
+            resultElement.style.color = 'green'; // Indicate success
+        } catch (error) {
+            resultElement.textContent = `Error: ${error.message}`;
+            resultElement.style.color = 'red'; // Indicate error
+            console.error('API Test Error:', error);
+        }
+    }
+
+    // Function to test POST endpoints
+    async function testPostEndpoint(url, bodyElementId, resultElementId, csrfToken) {
+        const resultElement = document.getElementById(resultElementId);
+        const bodyElement = document.getElementById(bodyElementId);
+        resultElement.textContent = 'Sending POST request...';
+        try {
+            const requestBody = JSON.parse(bodyElement.value);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken // Use the passed CSRF token
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}. Message: ${JSON.stringify(data)}`);
+            }
+            resultElement.textContent = JSON.stringify(data, null, 2);
+            resultElement.style.color = 'green';
+        } catch (error) {
+            resultElement.textContent = `Error: ${error.message}`;
+            resultElement.style.color = 'red';
+            console.error('API POST Test Error:', error);
+        }
+    }
+
+    // Initialize tooltips (if you have Bootstrap's JS)
+    document.addEventListener('DOMContentLoaded', function () {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+  </script>
+{% endblock javascripts %}

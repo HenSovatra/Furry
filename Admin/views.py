@@ -1,4 +1,5 @@
 import requests
+from django.db.models import Sum, F
 import json
 import datetime
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
@@ -7,6 +8,7 @@ from django.apps import apps
 from django.db.models import ForeignKey, ManyToManyField, DateTimeField, IntegerField, EmailField, CharField, TextField, DecimalField, BooleanField, ImageField
 from django.urls import reverse
 import csv
+from Admin.models import Customer, Order
 from django.db import models
 from io import StringIO
 from .models import *
@@ -14,6 +16,10 @@ from PetStore.models import Product as PetStoreProduct, Category
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from urllib.parse import urlparse, parse_qs, quote
+from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear
+from django.db.models import Count
+from decimal import Decimal
+from datetime import datetime, timedelta
 
 BASE_API_URL = "http://127.0.0.1:8000/api/"
 
@@ -98,22 +104,122 @@ def get_base_context(request, model_name=None):
     context['model_map'] = model_map_for_context
     return context
 
+
+
 def dashboard(request):
     context = get_base_context(request)
     context['segment'] = 'dashboard'
     context['page_title'] = "Admin Dashboard"
 
-    total_products = PetStoreProduct.objects.count()
-    total_customers = Customer.objects.count()
-    total_orders = Order.objects.count()
-    total_revenue = Order.objects.filter(status='delivered').aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0.00
+    # Products and Customers
+    context['total_products'] = PetStoreProduct.objects.count()
 
-    context.update({
-        'total_products': total_products,
-        'total_customers': total_customers,
-        'total_orders': total_orders,
-        'total_revenue': total_revenue,
-    })
+    # --- AGGREGATED PRODUCT DATA FOR CHART (Daily, Weekly, Monthly, Yearly) ---
+    daily_products_counts_queryset = PetStoreProduct.objects \
+        .annotate(period=TruncDay('created_at')) \
+        .values('period') \
+        .annotate(count=Count('id')) \
+        .order_by('period')
+
+    daily_product_data = []
+    for entry in daily_products_counts_queryset:
+        daily_product_data.append({
+            'label': entry['period'].strftime('%b %d'),
+            'value': entry['count']
+        })
+    context['daily_product_data'] = daily_product_data
+
+    weekly_products_counts_queryset = PetStoreProduct.objects \
+        .annotate(period=TruncWeek('created_at')) \
+        .values('period') \
+        .annotate(count=Count('id')) \
+        .order_by('period')
+
+    weekly_product_data = []
+    for entry in weekly_products_counts_queryset:
+        weekly_product_data.append({
+            'label': entry['period'].strftime('Wk %W, %Y'),
+            'value': entry['count']
+        })
+    context['weekly_product_data'] = weekly_product_data
+
+    monthly_products_counts_queryset = PetStoreProduct.objects \
+        .annotate(period=TruncMonth('created_at')) \
+        .values('period') \
+        .annotate(count=Count('id')) \
+        .order_by('period')
+
+    monthly_product_data = []
+    for entry in monthly_products_counts_queryset:
+        monthly_product_data.append({
+            'label': entry['period'].strftime('%B %Y'),
+            'value': entry['count']
+        })
+    context['monthly_product_data'] = monthly_product_data
+
+    yearly_products_counts_queryset = PetStoreProduct.objects \
+        .annotate(period=TruncYear('created_at')) \
+        .values('period') \
+        .annotate(count=Count('id')) \
+        .order_by('period')
+
+    yearly_product_data = []
+    for entry in yearly_products_counts_queryset:
+        yearly_product_data.append({
+            'label': entry['period'].strftime('%Y'),
+            'value': entry['count']
+        })
+    context['yearly_product_data'] = yearly_product_data
+    # --- END AGGREGATED PRODUCT DATA ---
+
+    # Optional: Calculate product growth based on actual daily data
+    context['product_growth'] = 0
+    if len(daily_product_data) >= 2:
+        latest_count = daily_product_data[-1]['value']
+        previous_count = daily_product_data[-2]['value']
+        if previous_count > 0:
+            context['product_growth'] = round(((latest_count - previous_count) / previous_count) * 100)
+        else:
+            context['product_growth'] = 100 if latest_count > 0 else 0
+
+
+    # Get registered customers (not admin ones)
+    try:
+        customer_response = requests.get("http://127.0.0.1:8000/api/register-customers/")
+        if customer_response.status_code == 200:
+            context['total_customers'] = len(customer_response.json())
+        else:
+            context['total_customers'] = 0
+    except requests.exceptions.RequestException:
+        context['total_customers'] = 0
+
+    # Orders and Revenue
+    try:
+        order_response = requests.get("http://127.0.0.1:8000/api/admin/orders/")
+        if order_response.status_code == 200:
+            orders = order_response.json()
+            context['total_orders'] = len(orders)
+            raw_total = sum(float(order['total_amount']) for order in orders)
+            context['total_revenue'] = raw_total - (len(orders) * 5)
+        else:
+            context['total_orders'] = 0
+            context['total_revenue'] = 0.0
+    except requests.exceptions.RequestException:
+        context['total_orders'] = 0
+        context['total_revenue'] = 0.0
+
+    # Feedback
+    try:
+        feedback_response = requests.get("http://127.0.0.1:8000/api/feedback/")
+        if feedback_response.status_code == 200:
+            context['feedback_list'] = feedback_response.json()
+        else:
+            context['feedback_list'] = []
+    except requests.exceptions.RequestException:
+        context['feedback_list'] = []
+
+
+
     return render(request, 'admin_app/index.html', context)
 
 def dynamic_api_overview(request):
@@ -122,17 +228,32 @@ def dynamic_api_overview(request):
     context['page_title'] = "Dynamic API Endpoints Overview"
 
     managed_models = {
-        'product': PetStoreProduct,
-        'customer': Customer,
-        'order': Order,
-        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('Admin') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('Admin').get_models()] else None,
-        'billing': Billing,
+
     }
 
-    available_routes = [name for name, model_cls in managed_models.items() if model_cls is not None]
+    # Model-based routes
+    available_routes = [
+        {
+            "name": name,
+            "url": f"/admin/dynamic-api/{name}/"
+        }
+        for name, model_cls in managed_models.items() if model_cls is not None
+    ]
 
-    context['routes'] = available_routes
-    return render(request, 'admin_app/dyn_dt/index.html', context)
+    # Manually added API routes
+    custom_apis = [
+        {"name": "categories", "url": "/api/admin/categories/"},
+        {"name": "orders", "url": "/api/admin/orders/"},
+        {"name": "customers", "url": "/api/register-customers/"},
+        {"name": "products", "url": "/api/admin/products/"},
+        {"name": "register-customers", "url": "/api/register-customers/"},
+        {"name": "feedback", "url": "/api/feedback/"},
+        {"name": "posts", "url": "/api/posts/"},
+        {"name": "admin-orders", "url": "/api/admin/orders/"},
+    ]
+
+    context['routes'] = available_routes + custom_apis
+    return render(request, 'admin_app/dyn_api/index.html', context)
 
 def dynamic_dt_overview(request):
     context = get_base_context(request)
@@ -738,11 +859,26 @@ def charts(request):
     context['segment'] = 'charts'
     context['page_title'] = "Sales & Product Charts"
 
-    products_for_chart = PetStoreProduct.objects.all().values('name', 'original_price')
-    products_data = list(products_for_chart)
-    products_json_string = json.dumps(products_data)
-    context['products_for_chart'] = products_json_string
+    
+    # Annotate products by how many times they were bought
+    product_sales = (
+        PetStoreProduct.objects
+        .annotate(total_quantity=Sum('orderitem__quantity'))
+        .values('name', 'original_price', 'total_quantity')
+        .order_by('-total_quantity')  # Sort by most bought
+    )
 
+    products_data = []
+    for product in product_sales:
+        products_data.append({
+            'name': product['name'],
+            'original_price': float(product['original_price']),
+            'total_quantity': product['total_quantity'] or 0
+        })
+
+    context['products_for_chart'] = json.dumps(products_data)
+
+    # Static dummy sales data
     sales_data = [
         {'date': '2024-01-01', 'amount': 1500},
         {'date': '2024-02-01', 'amount': 2200},
@@ -750,6 +886,48 @@ def charts(request):
         {'date': '2024-04-01', 'amount': 2500},
     ]
     context['sales_data_json'] = json.dumps(sales_data)
+
+    daily_product_data = []
+    for i in range(7):
+        date = datetime.now() - timedelta(days=6-i)
+        daily_product_data.append({
+            'label': date.strftime('%b %d'),
+            'value': 50 + i * 5 + (i % 2) * 10 # Dummy values
+        })
+
+    # Example: Weekly data for the last 4 weeks
+    weekly_product_data = []
+    for i in range(4):
+        date = datetime.now() - timedelta(weeks=3-i)
+        weekly_product_data.append({
+            'label': f'Week {i+1}', # You might want to format this as "Jan 1 - Jan 7" etc.
+            'value': 200 + i * 20 + (i % 2) * 30 # Dummy values
+        })
+
+    # Example: Monthly data for the last 6 months
+    monthly_product_data = []
+    for i in range(6):
+        date = datetime.now().replace(day=1) - timedelta(days=30 * (5-i))
+        monthly_product_data.append({
+            'label': date.strftime('%b'),
+            'value': 800 + i * 50 + (i % 2) * 100 # Dummy values
+        })
+
+    # Example: Yearly data for the last 3 years
+    yearly_product_data = []
+    for i in range(3):
+        year = datetime.now().year - (2-i)
+        yearly_product_data.append({
+            'label': str(year),
+            'value': 5000 + i * 500 + (i % 2) * 1000 # Dummy values
+        })
+
+    context['daily_product_data'] = json.dumps(daily_product_data)
+    context['weekly_product_data'] = json.dumps(weekly_product_data)
+    context['monthly_product_data'] = json.dumps(monthly_product_data)
+    context['yearly_product_data'] = json.dumps(yearly_product_data)
+
+
 
     return render(request, 'admin_app/charts/index.html', context)
 

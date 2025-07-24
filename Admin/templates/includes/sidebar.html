@@ -1,4 +1,4 @@
-{% load static %} 
+{% load static %}
 
 <aside
   class="sidenav navbar navbar-vertical navbar-expand-xs border-0 border-radius-xl my-3 fixed-start ms-3 bg-gradient-dark"
@@ -47,7 +47,15 @@
       <li class="nav-item">
         <a
           class="nav-link text-white {% if segment == 'dynamic_dt' or request.GET.main_item %}active bg-gradient-primary{% endif %}"
-          href="{% url 'Admin:dynamic_dt_overview' %}" {# Link to the generic table page #}
+          href="{% url 'Admin:dynamic_dt_overview' %}"
+          {#
+          Link
+          to
+          the
+          generic
+          table
+          page
+          #}
         >
           <div
             class="text-white text-center me-2 d-flex align-items-center justify-content-center"
@@ -85,21 +93,6 @@
             <i class="material-icons opacity-10">leaderboard</i>
           </div>
           <span class="nav-link-text ms-1">Charts</span>
-        </a>
-      </li>
-
-      {# Billing (existing) #}
-      <li class="nav-item">
-        <a
-          class="nav-link text-white {% if segment == 'billing' %}active bg-gradient-primary{% endif %}"
-          href="{% url 'Admin:billing' %}"
-        >
-          <div
-            class="text-white text-center me-2 d-flex align-items-center justify-content-center"
-          >
-            <i class="material-icons opacity-10">receipt_long</i>
-          </div>
-          <span class="nav-link-text ms-1">Billing</span>
         </a>
       </li>
 
