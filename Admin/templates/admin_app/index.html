@@ -1,7 +1,8 @@
-{% extends "layouts/base.html" %} {% load static %} {% block title %}Admin
-Dashboard{% endblock title %} {% block breadcrumb_page %}Dashboard{% endblock
-breadcrumb_page %} {% block breadcrumb_title %}Dashboard{% endblock
-breadcrumb_title %} {% block content %}
+{% extends "layouts/base.html" %} {% load static %} 
+{% block title %}Admin Dashboard{% endblock title %} 
+{% block breadcrumb_page %}Dashboard{% endblock breadcrumb_page %} 
+{% block breadcrumb_title %}Dashboard{% endblock breadcrumb_title %} 
+{% block content %}
 <style>
   /* Styles for the image carousel gradient overlay */
   .carousel-item::before {
@@ -28,7 +29,6 @@ breadcrumb_title %} {% block content %}
     z-index: 1; /* Place text above the overlay */
   }
 
-<<<<<<< HEAD
   /* Style for active chart period button */
   .chart-period-btn.active {
     background-color: #5e72e4; /* Example primary color */
@@ -37,12 +37,6 @@ breadcrumb_title %} {% block content %}
   }
 </style>
 
-=======
-{% block breadcrumb_page %}Dashboard{% endblock breadcrumb_page %}
-{% block breadcrumb_title %}Dashboard{% endblock breadcrumb_title %}
-
-{% block content %}
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
 <div class="row">
   <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
     <div class="card">
@@ -68,15 +62,7 @@ breadcrumb_title %} {% block content %}
             <div
               class="icon icon-shape bg-gradient-primary shadow-primary text-center rounded-circle"
             >
-<<<<<<< HEAD
-              <img
-                src="{% static 'assets/icons/product.png' %}"
-                alt="Products"
-                style="width: 30px"
-              />
-=======
-              <i class="bi bi-archive"></i>
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
+            <i class="bi bi-archive"></i>
             </div>
           </div>
         </div>
@@ -103,15 +89,7 @@ breadcrumb_title %} {% block content %}
             <div
               class="icon icon-shape bg-gradient-danger shadow-danger text-center rounded-circle"
             >
-<<<<<<< HEAD
-              <img
-                src="{% static 'assets/icons/user.png' %}"
-                alt="Customers"
-                style="width: 30px"
-              />
-=======
-            <i class="bi bi-person-check"></i>
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
+             <i class="bi bi-person-check"></i>
             </div>
           </div>
         </div>
@@ -138,15 +116,7 @@ breadcrumb_title %} {% block content %}
             <div
               class="icon icon-shape bg-gradient-success shadow-success text-center rounded-circle"
             >
-<<<<<<< HEAD
-              <img
-                src="{% static 'assets/icons/order.png' %}"
-                alt="Orders"
-                style="width: 30px"
-              />
-=======
-             <i class="bi bi-receipt"></i>
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
+              <i class="bi bi-receipt"></i>
             </div>
           </div>
         </div>
@@ -163,26 +133,27 @@ breadcrumb_title %} {% block content %}
                   Total Revenue
               </p>
               <h5 class="font-weight-bolder">
-                  ${{ stripe_revenue_today|floatformat:2 }}
+                  ${{ stripe_revenue_this_month|floatformat:2 }} {# Changed from stripe_revenue_today #}
               </h5>
               <p class="mb-0">
                   {# Conditional display for percentage change based on 'is_revenue_increase' #}
-                  {% if stripe_revenue_yesterday is not none %} {# Ensure yesterday's data was fetched #}
+                  {# Use stripe_revenue_last_month for comparison #}
+                  {% if stripe_revenue_last_month is not none %} {# Ensure last month's data was fetched #}
                       {% if revenue_percentage_change > 0 %} {# If there's an actual change (not 0%) #}
                           {% if is_revenue_increase %}
                               <span class="text-success text-sm font-weight-bolder">+{{ revenue_percentage_change|floatformat:2 }}%</span>
                           {% else %}
                               <span class="text-danger text-sm font-weight-bolder">-{{ revenue_percentage_change|floatformat:2 }}%</span>
                           {% endif %}
-                      {% elif stripe_revenue_today == 0 and stripe_revenue_yesterday > 0 %} {# Special case: Today 0, Yesterday > 0 (100% decrease) #}
+                      {% elif stripe_revenue_this_month == 0 and stripe_revenue_last_month > 0 %} {# Special case: This Month 0, Last Month > 0 (100% decrease) #}
                           <span class="text-danger text-sm font-weight-bolder">-100.00%</span>
-                      {% elif stripe_revenue_today > 0 and stripe_revenue_yesterday == 0 %} {# Special case: Today > 0, Yesterday 0 (infinite increase) #}
+                      {% elif stripe_revenue_this_month > 0 and stripe_revenue_last_month == 0 %} {# Special case: This Month > 0, Last Month 0 (infinite increase) #}
                           <span class="text-success text-sm font-weight-bolder">+Infinite%</span>
-                      {% else %} {# Both today and yesterday are 0, or revenue_percentage_change is exactly 0 #}
+                      {% else %} {# Both this month and last month are 0, or revenue_percentage_change is exactly 0 #}
                           <span class="text-muted text-sm font-weight-bolder">0.00%</span>
                       {% endif %}
                   {% endif %}
-                  than yesterday 
+                  than last month {# Changed from than yesterday #}
               </p>
           </div>
           </div>
@@ -190,15 +161,7 @@ breadcrumb_title %} {% block content %}
             <div
               class="icon icon-shape bg-gradient-warning shadow-warning text-center rounded-circle"
             >
-<<<<<<< HEAD
-              <img
-                src="{% static 'assets/icons/revenue.png' %}"
-                alt="Revenue"
-                style="width: 30px"
-              />
-=======
-             <i class="bi bi-currency-dollar"></i>
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
+                <i class="bi bi-currency-dollar"></i>
             </div>
           </div>
         </div>

@@ -16,15 +16,17 @@ from PetStore.models import Product as PetStoreProduct, Category
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from urllib.parse import urlparse, parse_qs, quote
-<<<<<<< HEAD
+
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear
 from django.db.models import Count
 from decimal import Decimal
 from datetime import datetime, timedelta
-=======
-from django.contrib.admin.views.decorators import staff_member_required
+from APIs.decorators import staff_member_required
+import calendar # Import the calendar module to get days in a month
+import logging
+import stripe
+logger = logging.getLogger(__name__)
 
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
 
 BASE_API_URL = "http://127.0.0.1:8000/api/"
 
@@ -36,6 +38,79 @@ API_ENDPOINTS = {
     'billing': 'admin/billings/',
     'category': 'admin/categories/',
 }
+
+def get_monthly_stripe_revenue(target_date: datetime) -> float:
+    """
+    Calculates the total *Stripe* revenue for a specific month.
+    Converts the target_date to UTC for Stripe API filtering.
+
+    Args:
+        target_date: A timezone-aware datetime object representing any day within
+                     the month for which to calculate revenue (e.g., datetime.now()
+                     for the current month, or a specific date for a past month).
+
+    Returns:
+        The total revenue in the primary currency unit (e.g., dollars, not cents).
+        Returns 0.0 if no successful payments are found or on error.
+    """
+    if not stripe.api_key:
+        logger.error("Error: STRIPE_SECRET_KEY not set. Please set your Stripe secret key in settings.py.")
+        return 0.0
+
+    # Calculate the first day of the target month in the project's timezone
+    start_of_month_local = timezone.make_aware(
+        datetime(target_date.year, target_date.month, 1),
+        timezone.get_current_timezone()
+    )
+
+    # Calculate the last day of the target month
+    # Get the number of days in the target month
+    _, num_days_in_month = calendar.monthrange(target_date.year, target_date.month)
+    end_of_month_local = timezone.make_aware(
+        datetime(target_date.year, target_date.month, num_days_in_month),
+        timezone.get_current_timezone()
+    )
+    # Set time to the very end of the last day
+    end_of_month_local = end_of_month_local.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+
+    # Convert local timezone datetimes to UTC timestamps for Stripe API
+    start_timestamp_utc = int(start_of_month_local.timestamp())
+    end_timestamp_utc = int(end_of_month_local.timestamp())
+
+    total_amount_cents = 0
+    has_more = True
+    starting_after = None
+
+    try:
+        while has_more:
+            payments = stripe.PaymentIntent.list(
+                created={
+                    'gte': start_timestamp_utc,
+                    'lte': end_timestamp_utc
+                },
+                limit=100, # Max limit per request
+                starting_after=starting_after
+            )
+
+            for payment in payments.data:
+                # Filter by status AFTER receiving the data from Stripe
+                if payment.status == 'succeeded':
+                    total_amount_cents += payment.amount
+                    # logger.info(f"  - PI: {payment.id}, Status: {payment.status}, Amount: {payment.amount / 100:.2f} {payment.currency.upper()}")
+
+            has_more = payments.has_more
+            if has_more:
+                starting_after = payments.data[-1].id
+
+        return total_amount_cents / 100.0
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe API Error fetching payments for {target_date.strftime('%Y-%m')}: {e}")
+        return 0.0
+    except Exception as e:
+        logger.error(f"An unexpected error occurred while fetching Stripe data for {target_date.strftime('%Y-%m')}: {e}")
+        return 0.0
 
 def get_model_fields(model):
     fields = []
@@ -108,19 +183,14 @@ def get_base_context(request, model_name=None):
     }
     context['model_map'] = model_map_for_context
     return context
-<<<<<<< HEAD
 
-
-
-=======
 @staff_member_required
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
 def dashboard(request):
     context = get_base_context(request)
     context['segment'] = 'dashboard'
     context['page_title'] = "Admin Dashboard"
 
-    # Products and Customers
+    # Products
     context['total_products'] = PetStoreProduct.objects.count()
 
     # --- AGGREGATED PRODUCT DATA FOR CHART (Daily, Weekly, Monthly, Yearly) ---
@@ -192,44 +262,86 @@ def dashboard(request):
             context['product_growth'] = 100 if latest_count > 0 else 0
 
 
-    # Get registered customers (not admin ones)
+    # Get registered customers (not admin ones) - Assumes an external API call
     try:
         customer_response = requests.get("http://127.0.0.1:8000/api/register-customers/")
         if customer_response.status_code == 200:
             context['total_customers'] = len(customer_response.json())
         else:
             context['total_customers'] = 0
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching total customers: {e}")
         context['total_customers'] = 0
 
-    # Orders and Revenue
+    # Orders (still from your API/DB if you want total order count separate from Stripe revenue)
+    # Assumes an external API call for order count
     try:
         order_response = requests.get("http://127.0.0.1:8000/api/admin/orders/")
         if order_response.status_code == 200:
             orders = order_response.json()
             context['total_orders'] = len(orders)
-            raw_total = sum(float(order['total_amount']) for order in orders)
-            context['total_revenue'] = raw_total - (len(orders) * 5)
+            # Removed raw_total and total_revenue calculation from internal API here
+            # as it's now handled by Stripe below
         else:
             context['total_orders'] = 0
-            context['total_revenue'] = 0.0
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching total orders: {e}")
         context['total_orders'] = 0
-        context['total_revenue'] = 0.0
 
-    # Feedback
+    # --- STRIPE REVENUE CALCULATIONS FOR THIS MONTH AND LAST MONTH ---
+    current_date = timezone.now()
+
+    # This Month's Revenue
+    context['stripe_revenue_this_month'] = get_monthly_stripe_revenue(current_date)
+
+    # Last Month's Revenue
+    # Calculate a date in the previous month (e.g., Dec 31st if current month is Jan)
+    first_day_of_this_month = timezone.make_aware(
+        datetime(current_date.year, current_date.month, 1),
+        timezone.get_current_timezone()
+    )
+    last_month_date = first_day_of_this_month - timedelta(days=1)
+    context['stripe_revenue_last_month'] = get_monthly_stripe_revenue(last_month_date)
+
+
+    # Calculate percentage change for revenue (This Month vs Last Month)
+    revenue_percentage_change = 0.0
+    is_revenue_increase = False
+    is_revenue_infinite_increase = False # Flag for +Infinite%
+
+    if context['stripe_revenue_last_month'] > 0:
+        revenue_percentage_change = (
+            (context['stripe_revenue_this_month'] - context['stripe_revenue_last_month']) / context['stripe_revenue_last_month']
+        ) * 100
+        is_revenue_increase = revenue_percentage_change >= 0
+        revenue_percentage_change = abs(revenue_percentage_change)
+    elif context['stripe_revenue_this_month'] > 0 and context['stripe_revenue_last_month'] == 0:
+        # If this month's revenue is positive and last month's was zero, it's an "infinite" increase
+        is_revenue_infinite_increase = True
+        is_revenue_increase = True # It is definitely an increase
+    else: # Both this month and last month are 0, or revenue_percentage_change is exactly 0
+        revenue_percentage_change = 0.0
+        is_revenue_increase = False # Consider it no change
+
+    context['revenue_percentage_change'] = revenue_percentage_change
+    context['is_revenue_increase'] = is_revenue_increase
+    context['is_revenue_infinite_increase'] = is_revenue_infinite_increase
+    # ------------------------------------------------------------------
+
+    # Feedback - Assumes an external API call
     try:
         feedback_response = requests.get("http://127.0.0.1:8000/api/feedback/")
         if feedback_response.status_code == 200:
             context['feedback_list'] = feedback_response.json()
         else:
             context['feedback_list'] = []
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching feedback: {e}")
         context['feedback_list'] = []
 
-
-
     return render(request, 'admin_app/index.html', context)
+
+
 @staff_member_required
 def dynamic_api_overview(request):
     context = get_base_context(request)
@@ -237,15 +349,11 @@ def dynamic_api_overview(request):
     context['page_title'] = "Dynamic API Endpoints Overview"
 
     managed_models = {
-<<<<<<< HEAD
-
-=======
         'product': PetStoreProduct,
         'customer': Customer,
         'order': Order,
         'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('APIs') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('APIs').get_models()] else None,
         'billing': Billing,
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
     }
 
     # Model-based routes
@@ -257,8 +365,6 @@ def dynamic_api_overview(request):
         for name, model_cls in managed_models.items() if model_cls is not None
     ]
 
-<<<<<<< HEAD
-    # Manually added API routes
     custom_apis = [
         {"name": "categories", "url": "/api/admin/categories/"},
         {"name": "orders", "url": "/api/admin/orders/"},
@@ -271,9 +377,6 @@ def dynamic_api_overview(request):
     ]
 
     context['routes'] = available_routes + custom_apis
-=======
-    context['routes'] = available_routes
->>>>>>> 5c260a0e7842b01816264bfd82e4823cc76f664c
     return render(request, 'admin_app/dyn_api/index.html', context)
 
 @staff_member_required
@@ -961,6 +1064,7 @@ def billing(request):
     invoices = Billing.objects.all().select_related('customer').order_by('-issue_date')
     context['invoices'] = invoices
     return render(request, 'admin_app/billing/index.html', context)
+
 @staff_member_required
 def user_management(request):
     context = get_base_context(request)

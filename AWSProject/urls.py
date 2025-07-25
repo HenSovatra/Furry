@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path,include
 from django.conf import settings # Import settings
 from django.conf.urls.static import static # Import static
-
+admin.site.login_url = settings.LOGIN_URL
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('PetStore.urls')), 

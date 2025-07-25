@@ -2,6 +2,8 @@ from functools import wraps
 from django.http import HttpRequest
 from django.utils import timezone
 from Admin.models import APIList
+from django.contrib.auth.decorators import user_passes_test
+from django.conf import settings
 
 def track_api_usage(view_func):
     """
@@ -25,3 +27,17 @@ def track_api_usage(view_func):
 
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def staff_member_required(function=None, redirect_field_name='next', login_url=None):
+    """
+    Decorator for views that checks that the user is logged in and is a staff member,
+    displaying the login page if necessary. It ensures the redirect goes to the
+    configured LOGIN_URL in settings.
+    """
+    actual_login_url = login_url or settings.LOGIN_URL
+    return user_passes_test(
+        lambda u: u.is_active and u.is_staff,
+        login_url=actual_login_url,
+        redirect_field_name=redirect_field_name
+    )(function)
