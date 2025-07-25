@@ -7,6 +7,7 @@ app_name = 'APIs'
 
 urlpatterns = [
     path('products/', views.product_list, name='api-product-list'),
+    path('products/filter/', views.products_by_createdate, name='api-product-list-date'),
     path('products/<int:pk>/', views.product_detail, name='api-product-detail'),
     path('cart/add/', views.add_to_cart_api, name='api-add-to-cart'),
     path('cart/', views.cart_details, name='api-cart-details'),

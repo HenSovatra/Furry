@@ -3,7 +3,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission # For User Management
 from django.conf import settings # To get AUTH_USER_MODEL if custom user is elsewhere
-
+from django.utils import timezone
 # User Account Management (if not using Django's default Admin and want custom fields)
 # If you are only managing default User model, you don't need to define it here.
 # If you have a custom user model in your main project, ensure it's imported or referenced.
@@ -71,3 +71,28 @@ class Billing(models.Model):
 
     def __str__(self):
         return f"Invoice {self.invoice_number} for {self.customer}"
+    
+class APIList(models.Model):
+    """
+    Stores a list of API endpoints and their usage statistics.
+    """
+    endpoint = models.CharField(max_length=255, unique=True, help_text="The full API endpoint URL, e.g., /api/login/")
+    description = models.TextField(blank=True, null=True, help_text="A brief description of what this API does.")
+    last_accessed = models.DateTimeField(null=True, blank=True, help_text="Last time this API was successfully accessed.")
+    access_count = models.PositiveIntegerField(default=0, help_text="Number of times this API has been accessed.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "API Endpoint"
+        verbose_name_plural = "API Endpoints"
+        ordering = ['endpoint'] # Order by endpoint alphabetically by default
+
+    def __str__(self):
+        return self.endpoint
+
+    def increment_usage(self):
+        """Increments the access count and updates last_accessed timestamp."""
+        self.access_count += 1
+        self.last_accessed = timezone.now()
+        self.save()

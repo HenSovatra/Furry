@@ -8,7 +8,8 @@ from django.db.models import Sum
 from PetStore.models import Product as PetStoreProduct, Category, Cart, CartItem, Order, OrderItem, Feedback, FeedbackImage, Post
 # Explicitly import models from Admin.models
 from Admin.models import Customer, Billing
-
+from django.db import transaction # Import transaction for atomic operations
+from Admin.models import Customer 
 # --- Teammate's Existing Serializers (UPDATED to use PetStoreProduct) ---
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
@@ -86,50 +87,61 @@ class BillingSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(write_only=True, required=True, max_length=150)
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
-    password2 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
-    
-    # Add fields for the Customer profile
-    first_name = serializers.CharField(required=False, allow_blank=True)
-    last_name = serializers.CharField(required=False, allow_blank=True)
-    phone_number = serializers.CharField(required=False, allow_blank=True)
-    address = serializers.CharField(required=False, allow_blank=True)
+    password2 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'}) 
+    email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=False, max_length=100)
+    last_name = serializers.CharField(required=False, max_length=100)
+    phone_number = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    address = serializers.CharField(required=False, allow_blank=True, style={'base_template': 'textarea.html'})
+
 
     class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'password', 'password2',
-            'first_name', 'last_name', 'phone_number', 'address' # Include new fields
-        )
-        extra_kwargs = {'password': {'write_only': True}}
+        model = Customer 
+        fields = [
+            'username', 'password', 'password2', 
+            'email', 'first_name', 'last_name', 'phone_number', 'address' 
+        ]
+        extra_kwargs = {
+            'email': {'required': True},
+            'first_name': {'required': True},
+            'last_name': {'required': True},
+        }
+
 
     def validate(self, data):
         if data['password'] != data['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
+        if User.objects.filter(username=data['username']).exists():
+            raise serializers.ValidationError({"username": "This username is already taken."})
+        if User.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({"email": "A user with this email already exists."})
+
         return data
 
-    def create(self, validated_data):
-        # Pop fields for Customer model before creating the User
-        first_name = validated_data.pop('first_name', '')
-        last_name = validated_data.pop('last_name', '')
-        phone_number = validated_data.pop('phone_number', '')
-        address = validated_data.pop('address', '')
-        
-        # Remove password2 before creating the user
-        validated_data.pop('password2')
-        
-        # Create the User
-        user = User.objects.create_user(**validated_data)
+    def validate_email(self, value):
+        """
+        Check if a Customer with this email already exists.
+        This specifically checks the Customer profile's email field.
+        """
+        if Customer.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email address is already in use by another customer.")
+        return value
 
-        # Create the Customer profile linked to the newly created User
-        Customer.objects.create(
-            user=user, # Link the User instance
-            first_name=first_name,
-            last_name=last_name,
-            phone_number=phone_number,
-            address=address
-        )
-        return user # Return the user instance
+    def create(self, validated_data):
+        with transaction.atomic():
+            password = validated_data.pop('password')
+            username = validated_data.pop('username')
+            password2 = validated_data.pop('password2')
+            user = User.objects.create_user(
+                username=username,
+                email=validated_data['email'], 
+                password=password
+            )
+            customer = Customer.objects.create(user=user, **validated_data)
+            return user
+
     
 class OrderItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer()

@@ -85,7 +85,13 @@
                 localStorage.setItem('authToken', data.token);
                 messagesDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
                 // Redirect to home page
-                window.location.href = '{% url "PetStore:home" %}';
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    // Fallback in case redirect_url is somehow missing
+                    console.warn("No redirect URL provided, redirecting to home.");
+                    window.location.href = '/';
+                }
             } else {
                 // Display error message from DRF API
                 messagesDiv.innerHTML = `<div class="alert alert-danger">Login failed: ${data.error || 'Invalid credentials'}</div>`;

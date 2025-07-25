@@ -758,6 +758,95 @@
         });
     };
 
+
+    var fetchAndRenderLatestProducts = function() {
+        const $productListContainer = $('#product-order-by-date');
+        // Display a loading message while fetching data
+        $productListContainer.html('<p class="text-center text-muted py-5">Loading products...</p>');
+
+        // Make an AJAX request to your Django API endpoint for products
+        $.ajax({
+            url: '/api/products/filter/', // Make sure this URL is correctly configured in Django's urls.py
+            method: 'GET',
+            dataType: 'json', // Expect a JSON response
+            success: function(response) {
+                // Check if the response contains products and if there are any
+                if (response && response.length > 0) {
+                    $productListContainer.empty(); // Clear the loading message
+
+                    // Loop through each product in the response
+                    var item = 0; 
+                    response.forEach(function(product) {
+                        if(item >= 5) return; // Limit to 3 products
+                        // Construct the HTML for each product using template literals
+                        // Ensure that product properties (like product.id, product.name, etc.)
+                        // match the keys in the JSON response from your Django API.
+                        const productHtml = `
+                            <div class="col">
+                                <div class="product-item mb-4">
+                                    <figure>
+                                        <a href="#" class="open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="${product.id}" title="${product.name}">
+                                            <img src="${product.image}" alt="${product.name}" class="tab-image img-fluid rounded-3">
+                                        </a>
+                                    </figure>
+                                    <div class="d-flex flex-column text-center">
+                                        <h3 class="fs-5 fw-normal">
+                                            <a href="#" class="text-decoration-none open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="${product.id}">${product.name}</a>
+                                        </h3>
+                                        <div class="d-flex justify-content-center align-items-center gap-2">
+                                            ${product.discounted_price !== null ? // Check if discounted_price exists
+                                                `<del>$${product.original_price}</del>
+                                                <span class="text-dark fw-semibold">$${product.discounted_price}</span>` :
+                                                `<span class="text-dark fw-semibold">$${product.original_price}</span>`
+                                            }
+                                        </div>
+                                        <div class="button-area p-3">
+                                            <div class="justify-content-center d-flex mb-3">
+                                                <div class="input-group product-qty col-8 col-lg-6" style="width: 100px; display: flex; align-items: center; gap: 5px;">
+                                                    <span class="input-group-btn">
+                                                        <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="quantity-${product.id}">
+                                                            <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
+                                                        </button>
+                                                    </span>
+                                                    ${product.stock > 0 ? // Check if product is in stock
+                                                        `<input type="text" id="quantity-${product.id}" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="${product.stock}">` :
+                                                        `<input type="text" id="quantity-${product.id}" name="quantity" class="quantity form-control input-number text-center" value="0" min="0" max="${product.stock}" disabled>` // Disable if out of stock
+                                                    }
+                                                    <span class="input-group-btn">
+                                                        <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="quantity-${product.id}">
+                                                            <svg width="16" height="16"><use xlink:href="#plus"></use></svg>
+                                                        </button>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                ${product.stock > 0 ?
+                                                    `<a href="#" class="btn btn-primary rounded-1 p-2 fs-7 btn-cart" data-product-id="${product.id}">
+                                                        Add to Cart
+                                                    </a>` :
+                                                    `<button type="button" class="btn btn-secondary rounded-1 p-2 fs-7" disabled>Out of Stock</button>`
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        $productListContainer.append(productHtml);
+                        initProductQty(); 
+                        item++;// Reinitialize quantity controls for new products
+                    });
+                } else {
+                    $productListContainer.html('<div class="col-12 text-center py-5"><p>No products found.</p></div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error fetching products:", status, error, xhr.responseText);
+                $productListContainer.html('<div class="col-12 text-center py-5"><p>Error loading products. Please try again later.</p></div>');
+            }
+        });
+    };
+
     function loadRecentBlogPosts() {
         console.log('Loading recent blog posts...'); // Debugging log
         const container = $('#recent-blog-posts-container');
@@ -782,9 +871,9 @@
                     noPostsMessage.removeClass('d-none'); // Show 'no posts' message
                     return;
                 }
-
+                var item = 0
                 data.forEach(post => {
-                    // Format the date
+                    if(item >= 3) return; 
                     const publishedDate = new Date(post.published_date).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
@@ -813,6 +902,7 @@
                         </div>
                     `;
                     container.append(postHtml);
+                    item++;
                 });
             },
             error: function(xhr, status, error) {
@@ -836,7 +926,8 @@
         fetchAndRenderProducts();
         initCartItemControls(); 
         loadFeedbackSwiper(); // Load feedback swiper
-        loadRecentBlogPosts()
+        loadRecentBlogPosts();
+        fetchAndRenderLatestProducts();
     });
 
 })(jQuery);
