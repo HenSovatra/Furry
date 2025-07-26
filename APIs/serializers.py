@@ -226,12 +226,21 @@ class FeedbackSerializer(serializers.ModelSerializer):
         return obj.email or 'Anonymous'
 
 class PostSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(read_only=True) # This nests the category details
+    category = CategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(), source='category', write_only=True
+    )
+    image = serializers.ImageField()
+
 
     class Meta:
         model = Post
-        fields = [
-            'id', 'title', 'image', 'author', 'content',
-            'short_description', 'category', 'published_date', 'updated_at',
-            'is_published'
-        ]
+        fields = ['id', 'title', 'image', 'author', 'content',
+                  'short_description', 'category','category_id', 'published_date',
+                  'updated_at', 'is_published']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        return None

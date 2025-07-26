@@ -12,6 +12,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from rest_framework import viewsets, filters # Import filters
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import viewsets, permissions
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authtoken.models import Token
 import stripe
@@ -699,19 +700,26 @@ def get_feedback_api(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class PostViewSet(viewsets.ReadOnlyModelViewSet):
-    # The default queryset for list and retrieve actions (which already orders by published_date)
-    queryset = Post.objects.filter(is_published=True).order_by('-published_date')
+class PostViewSet(viewsets.ModelViewSet):
+    queryset = Post.objects.all()  # Add this line!
     serializer_class = PostSerializer
-    lookup_field = 'pk' # Use 'pk' for ID-based lookup
+    image = serializers.ImageField(required=False)  # Optional image field
+    
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        if self.request.method == 'GET':
+            return Post.objects.filter(is_published=True).order_by('-published_date')
+        return Post.objects.all()
+
+    lookup_field = 'pk'
 
     @action(detail=False, methods=['get'])
     def recent(self, request):
-        """
-        Returns ALL published blog posts, ordered by recent date.
-        This action will no longer limit to 3 posts.
-        """
-        # Get all posts from the default queryset (which is already filtered by is_published and ordered)
         all_recent_posts = self.get_queryset()
         serializer = self.get_serializer(all_recent_posts, many=True)
         return Response(serializer.data)
+        
+@csrf_exempt
+def dispatch(self, *args, **kwargs):
+    return super().dispatch(*args, **kwargs)

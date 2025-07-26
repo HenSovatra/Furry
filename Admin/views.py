@@ -349,11 +349,7 @@ def dynamic_api_overview(request):
     context['page_title'] = "Dynamic API Endpoints Overview"
 
     managed_models = {
-        'product': PetStoreProduct,
-        'customer': Customer,
-        'order': Order,
-        'orderitem': apps.get_model('Admin', 'OrderItem') if apps.is_installed('APIs') and 'OrderItem' in [m._meta.model_name for m in apps.get_app_config('APIs').get_models()] else None,
-        'billing': Billing,
+
     }
 
     # Model-based routes

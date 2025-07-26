@@ -251,7 +251,7 @@
           <div
             class="carousel-item h-100"
             style="
-              background-image: url('{% static 'assets\img\dog2.jpg' %}');
+              background-image: url('{% static 'assets\img\dog3.jpg' %}');
               background-size: cover;
             "
           >
@@ -300,6 +300,49 @@
   </div>
 </div>
 
+<!-- ===== Add Blog Form ===== -->
+<div class="container mt-5">
+  <h2>Add New Blog</h2>
+  <form id="addBlogForm" enctype="multipart/form-data">
+    <div class="form-group mb-3">
+      <label for="title">Title</label>
+      <input type="text" class="form-control" id="title" name="title" required />
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="content">Content</label>
+      <textarea class="form-control" id="content" name="content" rows="4" required></textarea>
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="image">Image</label>
+      <input type="file" class="form-control" id="image" name="image" accept="image/*" required />
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="author">Author</label>
+      <input type="text" class="form-control" id="author" name="author" value="Admin" required />
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="short_description">Short Description</label>
+      <textarea class="form-control" id="short_description" name="short_description" rows="2"></textarea>
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="category">Category</label>
+      <select class="form-control" id="category" name="category" required>
+        <option value="" disabled selected>Select a category</option>
+        <!-- Options will be dynamically loaded by JS -->
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit Blog</button>
+  </form>
+
+  <div id="blogMessage" class="mt-3"></div>
+</div>
+
 <div class="row mt-5">
   <div class="col-12">
     <div class="card">
@@ -337,9 +380,109 @@
   </div>
 </div>
 
+
+
+
 {% endblock content %} {% block extra_js %}
 <script src="{% static 'assets/js/plugins/chartjs.min.js' %}"></script>
 <script>
+
+
+document.addEventListener("DOMContentLoaded", function () {
+  const blogForm = document.getElementById("addBlogForm");
+  const blogMessage = document.getElementById("blogMessage");
+  const categorySelect = document.getElementById("category");
+
+  // Fetch categories and populate the dropdown
+  async function loadCategories() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/admin/categories/");
+      if (!response.ok) throw new Error("Failed to load categories");
+      const categories = await response.json();
+
+      categories.forEach(cat => {
+        const option = document.createElement("option");
+        option.value = cat.id;
+        option.textContent = cat.name;
+        categorySelect.appendChild(option);
+      });
+    } catch (err) {
+      blogMessage.innerHTML = `<div class="alert alert-danger">Error loading categories: ${err.message}</div>`;
+    }
+  }
+
+  loadCategories();
+
+  blogForm.addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const title = document.getElementById("title").value.trim();
+  const content = document.getElementById("content").value.trim();
+  const imageInput = document.getElementById("image");
+  const imageFile = imageInput.files[0];
+  const categoryId = categorySelect.value;
+  const csrfToken = getCookie("csrftoken");
+
+  if (!categoryId) {
+    blogMessage.innerHTML = `<div class="alert alert-warning">Please select a category.</div>`;
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("content", content);
+  formData.append("category_id", categoryId);
+  formData.append("short_description", content.substring(0, 100));
+  formData.append("is_published", true);
+  formData.append("author", "Admin");
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
+try {
+  const response = await fetch("http://127.0.0.1:8000/api/posts/", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": csrfToken,
+      // No Content-Type here!
+    },
+    body: formData,
+  });
+
+  const text = await response.text();
+  console.log("Response text:", text); // <-- add this line to see what server returned
+
+  if (!response.ok) {
+    blogMessage.innerHTML = `<div class="alert alert-danger">Error: ${text}</div>`;
+    return;
+  }
+
+  const data = JSON.parse(text);
+  blogMessage.innerHTML = `<div class="alert alert-success">Blog added successfully!</div>`;
+  blogForm.reset();
+} catch (error) {
+  blogMessage.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+}
+
+});
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+});
+
+
   // Store all aggregated data received from Django
   const allChartData = {
     daily: {{ daily_product_data|safe }},
