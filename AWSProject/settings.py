@@ -19,33 +19,24 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'genyurosama@gmail.com'
 
-EMAIL_HOST_PASSWORD = 'dzpd djtg enla ocnu' # Replace with actual App Password for testing
-DEFAULT_FROM_EMAIL = 'genyurosama@gmail.com' # The email address that appears as the sender
+EMAIL_HOST_PASSWORD = 'dzpd djtg enla ocnu' 
+DEFAULT_FROM_EMAIL = 'genyurosama@gmail.com' 
 SERVER_EMAIL = 'genyurosama@gmail.com'
 
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_51RnMacFSxjjrivZyTYtGMlZDLjNkxBrLCLq6v5rHp6ycQSBNwGA8UUQyPRZodSEocjcUUHoJdlGnSOHPqN76QFon00amyqL8FC') # Replace with your test key
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_51RnMacFSxjjrivZy6mqoCqtGLW60MxThdv9tpoDuWw311KhKMZd0y9L4bYPX9Hwbq3WvYkFnfrNNLKDMziyQXxIr00WwtoAM2p')     # Replace with your test key
 
-if os.environ.get('DJANGO_ENV') == 'production':
-    BASE_URL = 'https://yourdomain.com'
-else:
-    BASE_URL = 'http://localhost:8000'
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+BASE_URL = 'http://192.168.100.9:8000'
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-83ep--xmw69)z%nipo^97%s_c=5)ztzotn4*@hrke-q32e8^m7'
-LOGIN_URL = '/login/'  # Redirect to the login page if not authenticated
-# SECURITY WARNING: don't run with debug turned on in production!
+DEMO_API_ACCESS_TOKEN = 'e8f7b3a9c1d5f2a4b6c8d0e1f3a7b9c2d4e6f8a0b2c4d6e8f0a1b3c5d7e9f0a2'
+LOGIN_URL = '/login/'
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -64,11 +55,11 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication', # Allows browser-based session auth
-        'rest_framework.authentication.TokenAuthentication',   # Allows token-based auth
+        'rest_framework.authentication.SessionAuthentication', 
+        'rest_framework.authentication.TokenAuthentication',  
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny', # Default is open, you'll apply specific permissions to views
+        'rest_framework.permissions.AllowAny', 
     ]
 }
 
@@ -152,7 +143,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'), # This line tells Django to look in the 'static' folder at your project root
+    os.path.join(BASE_DIR, 'static'), 
 ]
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

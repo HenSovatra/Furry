@@ -2,32 +2,24 @@
 
     "use strict";
 
-    // Helper function to initialize preloader
    var initPreloader = function() {
     $(document).ready(function($) {
       var Body = $('body');
       Body.addClass('preloader-site');
     });
-    // CHANGED: Use .on('load') instead of .load() for modern jQuery
     $(window).on('load', function() {
       $('.preloader-wrapper').fadeOut();
       $('body').removeClass('preloader-site');
     });
   }
-    // Initialize Chocolat light box
-    // Uses jQuery to select elements, then gets native DOM elements for Chocolat
     var initChocolat = function() {
-        Chocolat($('.image-link').get(), { // .get() converts jQuery object to array of native DOM elements
+        Chocolat($('.image-link').get(), { 
             imageSize: 'contain',
             loop: true,
         });
     };
 
-    // Initialize Swiper sliders
-    // Swiper.js is a standalone library and is initialized with `new Swiper()`,
-    // passing a native DOM element or selector string.
     var initSwiper = function() {
-        // Swiper slider home 2
         $('.slideshow').each(function() {
             var space = $(this).attr('data-space') ? parseInt($(this).attr('data-space')) : 0;
             var col = $(this).attr('data-col');
@@ -35,8 +27,8 @@
                 col = 1;
             }
 
-            var swiper = new Swiper(this, { // Pass 'this' (native DOM element) to Swiper
-                slidesPerView: parseInt(col), // Ensure col is parsed as int
+            var swiper = new Swiper(this, { 
+                slidesPerView: parseInt(col), 
                 spaceBetween: space,
                 speed: 1000,
                 loop: true,
@@ -126,11 +118,9 @@
             }
         });
 
-        // product single page
         var thumb_slider = new Swiper(".product-thumbnail-slider", {
             slidesPerView: 5,
             spaceBetween: 20,
-            // autoplay: true,
             direction: "vertical",
             breakpoints: {
                 0: {
@@ -144,7 +134,6 @@
 
         var large_slider = new Swiper(".product-large-slider", {
             slidesPerView: 1,
-            // autoplay: true,
             spaceBetween: 0,
             effect: 'fade',
             thumbs: {
@@ -157,7 +146,6 @@
         });
     };
 
-    // Animate Texts
     var initTextFx = function() {
         $('.txt-fx').each(function() {
             var newstr = '';
@@ -184,16 +172,14 @@
         });
     };
 
-    // Input spinner
    var initProductQty = function() {
         $('.product-qty').each(function() {
             var $el_product = $(this);
-            // Using .off().on() to prevent multiple bindings if initProductQty is called multiple times
             $el_product.find('.quantity-right-plus').off('click').on('click', function(e) {
                 e.preventDefault();
                 var $input = $el_product.find('.quantity');
                 var currentQuantity = parseInt($input.val());
-                var maxQuantity = parseInt($input.attr('max')); // Get max from the input's max attribute
+                var maxQuantity = parseInt($input.attr('max')); 
 
                 if (currentQuantity < maxQuantity) {
                     $input.val(currentQuantity + 1);
@@ -204,14 +190,13 @@
                 e.preventDefault();
                 var $input = $el_product.find('.quantity');
                 var currentQuantity = parseInt($input.val());
-                var minQuantity = parseInt($input.attr('min')); // Get min from the input's min attribute
+                var minQuantity = parseInt($input.attr('min')); 
 
                 if (currentQuantity > minQuantity) {
                     $input.val(currentQuantity - 1);
                 }
             });
 
-            // Optional: Add change listener for direct input into the textbox
             $el_product.find('.quantity').off('change').on('change', function() {
                 var $input = $(this);
                 var value = parseInt($input.val());
@@ -227,17 +212,14 @@
         });
     };
 
-    // Initialize jarallax parallax
-    // Uses jQuery to select elements, then gets native DOM elements for jarallax
     var initJarallax = function() {
-        jarallax($(".jarallax").get()); // .get() converts jQuery object to array of native DOM elements
+        jarallax($(".jarallax").get()); 
 
         jarallax($(".jarallax-keep-img").get(), {
             keepImg: true,
         });
     };
 
-    // Modal Quick View functionality
     var initProductQuickViewModal = function() {
         const $productQuickViewModal = $('#productQuickViewModal');
         const $modalProductContent = $('#modalProductContent');
@@ -267,13 +249,11 @@
     };
 
      var initModalProductQty = function() {
-        // Use event delegation on the modal itself, as its content is dynamic
-        // This ensures the event listeners work even after new content is loaded
         $('#productQuickViewModal').on('click', '.quantity-right-plus', function(e) {
             e.preventDefault();
             var $input = $(this).closest('.product-qty').find('.quantity');
             var currentQuantity = parseInt($input.val());
-            var maxQuantity = parseInt($input.attr('max')); // Get max from the input's max attribute
+            var maxQuantity = parseInt($input.attr('max')); 
 
             if (currentQuantity < maxQuantity) {
                 $input.val(currentQuantity + 1);
@@ -284,14 +264,13 @@
             e.preventDefault();
             var $input = $(this).closest('.product-qty').find('.quantity');
             var currentQuantity = parseInt($input.val());
-            var minQuantity = parseInt($input.attr('min')); // Get min from the input's min attribute
+            var minQuantity = parseInt($input.attr('min'));
 
             if (currentQuantity > minQuantity) {
                 $input.val(currentQuantity - 1);
             }
         });
 
-        // Optional: Add change listener for direct input into the textbox within the modal
         $('#productQuickViewModal').on('change', '.quantity', function() {
             var $input = $(this);
             var value = parseInt($input.val());
@@ -306,14 +285,12 @@
         });
     };
 
-      // Function to get CSRF token from cookie
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
@@ -323,13 +300,12 @@
         return cookieValue;
     }
 
-    // Function to update the global cart item count (e.g., in header)
     var updateCartCount = function(count) {
         $('#cart-item-count').text(count);
         if (count > 0) {
-            $('#cart-item-count').removeClass('d-none'); // Show badge if items exist
+            $('#cart-item-count').removeClass('d-none'); 
         } else {
-            $('#cart-item-count').addClass('d-none'); // Hide badge if no items
+            $('#cart-item-count').addClass('d-none'); 
         }
     };
 
@@ -337,30 +313,26 @@
     var fetchAndRenderCartDetails = function() {
         const $cartDialogContent = $('#cart-dialog-content');
         const $cartDialogTotalPrice = $('#cart-dialog-total-price');
-        const $cartTotalItemsCount = $('.cart-total-items-count'); // Assuming you have an element for this
-        const $cartDialogCheckoutBtn = $('#cart-dialog-checkout-btn'); // Assuming you have a checkout button
+        const $cartTotalItemsCount = $('.cart-total-items-count'); 
+        const $cartDialogCheckoutBtn = $('#cart-dialog-checkout-btn'); 
 
-        $cartDialogContent.html('<p class="text-center text-muted">Loading cart...</p>'); // Show loading state
+        $cartDialogContent.html('<p class="text-center text-muted">Loading cart...</p>'); 
 
         $.ajax({
-            // IMPORTANT: Use Django's URL reversing for robustness
-            url: '/api/cart/', // Correct Django URL for cart details
+            url: '/api/cart/', 
             method: 'GET',
             dataType: 'json',
             success: function(response) {
-                console.log(response); // Keep this for debugging
+                console.log(response); 
 
                 let cartHtml = '';
                 if (response.cart_items && response.cart_items.length > 0) {
                     cartHtml = '<ul class="list-group list-group-flush">';
                     response.cart_items.forEach(item => {
-                        // Ensure product image URL is correctly accessed (from serializer)
                         const imageUrl = item.product.image || '/static/images/placeholder.png';
-                        // Ensure current_price is correctly accessed and formatted
                         console.log(item.product);
                         const unitPrice = item.product.original_price !== undefined && item.product.original_price !== null
                                         ? parseInt(item.product.discounted_price??item.product.original_price).toFixed(2) : '0.00';
-                        // Ensure total_price is correctly accessed and formatted
                         const itemTotalPrice = item.total_price !== undefined && item.total_price !== null
                                             ? item.total_price.toFixed(2) : '0.00';
 
@@ -391,23 +363,22 @@
                         `;
                     });
                     cartHtml += '</ul>';
-                    $cartDialogCheckoutBtn.removeClass('disabled'); // Enable checkout button
+                    $cartDialogCheckoutBtn.removeClass('disabled'); 
                 } else {
                     cartHtml = '<p class="text-center text-muted py-5">Your cart is empty.</p>';
-                    $cartDialogCheckoutBtn.addClass('disabled'); // Disable checkout button
+                    $cartDialogCheckoutBtn.addClass('disabled'); 
                 }
 
                 $cartDialogContent.html(cartHtml);
-                // Ensure total is formatted to 2 decimal places
                 $cartDialogTotalPrice.text(`$${response.total.toFixed(2)}`);
-                updateCartCount(response.total_items); // Update global counter
+                updateCartCount(response.total_items);
                 
             },
             error: function(xhr, status, error) {
                 console.error('Error fetching cart details:', status, error, xhr.responseText);
                 $cartDialogContent.html('<p class="text-danger text-center py-5">Failed to load cart. Please try again.</p>');
-                $cartDialogTotalPrice.text(`$0.00`); // Show 0.00 on error
-                updateCartCount(0); // Reset counter on error
+                $cartDialogTotalPrice.text(`$0.00`); 
+                updateCartCount(0); 
             }
         });
     };
@@ -417,34 +388,32 @@
         const currentQuantity = parseInt($qtyInput.val());
         let newQuantity = currentQuantity + change;
 
-        // Special handling for decrementing from 1 to 0 (which means remove)
         if (newQuantity <= 0) {
-            if (currentQuantity === 1 && change === -1) { // If going from 1 to 0 by decrement
-                removeCartItem(productId); // Remove completely
+            if (currentQuantity === 1 && change === -1) { 
+                removeCartItem(productId); 
                 return;
             }
-            newQuantity = 0; // Prevent negative quantity in input
+            newQuantity = 0; 
         }
 
-        // Disable buttons for feedback during AJAX call (optional)
         const $cartItemRow = $(`#cart-dialog-content .cart-item-row[data-product-id="${productId}"]`);
         $cartItemRow.find('button').prop('disabled', true);
 
         $.ajax({
-            url: 'api/cart/update-quantity/', // Django URL
+            url: 'api/cart/update-quantity/', 
             method: 'POST',
-            data: JSON.stringify({ // Send data as JSON
+            data: JSON.stringify({ 
                 'product_id': productId,
-                'quantity': newQuantity // Send the *absolute new quantity*
+                'quantity': newQuantity 
             }),
             contentType: 'application/json',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken') // IMPORTANT for POST requests
+                'X-CSRFToken': getCookie('csrftoken') 
             },
             success: function(response) {
                 if (response.success) {
-                    fetchAndRenderCartDetails(); // Re-render the cart on success
-                    updateCartCount(response.cart_total_items); // Update main cart count display
+                    fetchAndRenderCartDetails();
+                    updateCartCount(response.cart_total_items); 
                 } else {
                     alert('Error updating quantity: ' + (response.error || 'An unknown error occurred.'));
                 }
@@ -454,7 +423,7 @@
                 alert('Failed to update cart quantity. Please try again.');
             },
             complete: function() {
-                $cartItemRow.find('button').prop('disabled', false); // Re-enable buttons
+                $cartItemRow.find('button').prop('disabled', false); 
             }
         });
     };
@@ -465,22 +434,22 @@
         }
 
         const $cartItemRow = $(`#cart-dialog-content .cart-item-row[data-product-id="${productId}"]`);
-        $cartItemRow.find('button').prop('disabled', true).text('Removing...'); // Disable and change text
+        $cartItemRow.find('button').prop('disabled', true).text('Removing...'); 
 
         $.ajax({
-            url: 'api/cart/remove/', // Django URL
+            url: 'api/cart/remove/', 
             method: 'POST',
             data: JSON.stringify({
                 'product_id': productId
             }),
             contentType: 'application/json',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken') // IMPORTANT
+                'X-CSRFToken': getCookie('csrftoken') 
             },
             success: function(response) {
                 if (response.success) {
-                    fetchAndRenderCartDetails(); // Re-render the cart on success
-                    updateCartCount(response.cart_total_items); // Update main cart count display
+                    fetchAndRenderCartDetails(); 
+                    updateCartCount(response.cart_total_items); 
                 } else {
                     alert('Error removing item: ' + (response.error || 'An unknown error occurred.'));
                 }
@@ -489,39 +458,33 @@
                 console.error('Remove cart item error:', status, error, xhr.responseText);
                 alert('Failed to remove item from cart. Please try again.');
             }
-            // 'complete' not needed here as fetchAndRenderCartDetails will rebuild the HTML
         });
     };
 
 
     var initCartItemControls = function() {
-        // Decrement quantity button (-)
         $(document).on('click', '.decrement-qty-btn', function() {
             const productId = $(this).data('product-id');
-            updateCartItemQuantity(productId, -1); // Call the update function with change -1
+            updateCartItemQuantity(productId, -1); 
         });
 
-        // Increment quantity button (+)
         $(document).on('click', '.increment-qty-btn', function() {
             const productId = $(this).data('product-id');
-            updateCartItemQuantity(productId, 1); // Call the update function with change +1
+            updateCartItemQuantity(productId, 1); 
         });
 
-        // Remove item button
         $(document).on('click', '.remove-from-cart-btn', function() {
             const productId = $(this).data('product-id');
-            removeCartItem(productId); // Call the remove function
+            removeCartItem(productId); 
         });
     };
 
-    // Handle 'Add to Cart' button clicks (event delegation for dynamic buttons)
     var initAddToCart = function() {
         $(document).on('click', '.btn-cart', function(e) {
             e.preventDefault();
             const $button = $(this);
             const productId = $button.data('product-id');
-            // Check if the button is within a modal product view or main grid
-            let quantity = 1; // Default quantity
+            let quantity = 1; 
             let $quantityInput = $button.closest('.button-area').find('.quantity');
 
             if ($quantityInput.length) {
@@ -529,11 +492,10 @@
             }
 
             if (productId && quantity >= 1) {
-                // Disable button and show loading state
                 $button.prop('disabled', true).text('Adding...');
 
                 $.ajax({
-                    url: 'api/cart/add/', // Your Django URL for add to cart
+                    url: '/api/cart/add/', 
                     method: 'POST',
                     data: JSON.stringify({
                         'product_id': productId,
@@ -541,20 +503,18 @@
                     }),
                     contentType: 'application/json',
                     headers: {
-                        'X-CSRFToken': getCookie('csrftoken') // Include CSRF token
+                        'X-CSRFToken': getCookie('csrftoken') 
                     },
                     success: function(response) {
                         if (response.success) {
-                            alert(response.message); // Or use a nicer notification system
+                            alert(response.message); 
                             updateCartCount(response.cart_total_items);
 
-                            // Optional: Close quick view modal if open
                             $('#productQuickViewModal').modal('hide');
 
-                            // Open and refresh the cart dialog after adding
                             var cartDialog = new bootstrap.Modal(document.getElementById('cartDialogModal'));
                             cartDialog.show();
-                            fetchAndRenderCartDetails(); // Refresh cart content
+                            fetchAndRenderCartDetails(); 
 
                         } else {
                             alert('Error: ' + response.error);
@@ -565,7 +525,6 @@
                         alert('Failed to add item to cart. Please try again.');
                     },
                     complete: function() {
-                        // Re-enable button
                         $button.prop('disabled', false).html('Add to Cart');
                     }
                 });
@@ -574,53 +533,46 @@
             }
         });
 
-        // Event listener for when the cart dialog is shown
         $('#cartDialogModal').on('show.bs.modal', function() {
-            fetchAndRenderCartDetails(); // Load cart content every time modal is opened
+            fetchAndRenderCartDetails(); 
         });
     };
 
-    let mySwiper = null; // Declare a variable to hold the Swiper instance
+    let mySwiper = null;
 
     function loadFeedbackSwiper() {
         const swiperWrapper = $('#swiper-wrapper-content');
         const feedbackLoadingIndicator = $('#feedback-loading-indicator');
         const noFeedbackMessage = $('#no-feedback-message');
         const feedbackLoadError = $('#feedback-load-error');
-        const feedbackSwiper = $('#feedbackSwiper'); // The main Swiper container
+        const feedbackSwiper = $('#feedbackSwiper'); 
 
-        // Show loading indicator, hide other states
         feedbackLoadingIndicator.removeClass('d-none');
-        swiperWrapper.empty(); // Clear previous slides
+        swiperWrapper.empty(); 
         noFeedbackMessage.addClass('d-none');
         feedbackLoadError.addClass('d-none');
-        feedbackSwiper.addClass('d-none'); // Hide Swiper until populated
-
-        // Destroy existing Swiper instance if it exists to prevent re-initialization issues
+        feedbackSwiper.addClass('d-none'); 
         if (mySwiper) {
-            mySwiper.destroy(true, true); // true, true for clean destroy
+            mySwiper.destroy(true, true); 
             mySwiper = null;
         }
 
         $.ajax({
-            url: "/api/feedback/", // API endpoint to get feedback
+            url: "/api/feedback/", 
             type: 'GET',
             success: function(data) {
-                feedbackLoadingIndicator.addClass('d-none'); // Hide loading indicator
+                feedbackLoadingIndicator.addClass('d-none'); 
 
                 if (data.length === 0) {
-                    noFeedbackMessage.removeClass('d-none'); // Show 'no feedback' message
-                    return; // Exit if no data
+                    noFeedbackMessage.removeClass('d-none'); 
+                    return; 
                 }
 
-                // Populate Swiper Wrapper with feedback data
                 data.forEach(feedback => {
-                    // Generate HTML for feedback images
                     const imagesHtml = feedback.images.map(img => `
                         <img src="${img.image}" class="img-fluid rounded me-2 mb-2" alt="Feedback Image" style="max-height: 100px; object-fit: cover;">
                     `).join('');
 
-                    // Create the Swiper slide HTML
                     const swiperSlide = `
                         <div class="swiper-slide">
                             <div class="card position-relative text-left p-5 border-light shadow-sm rounded-3 h-100 d-flex flex-column">
@@ -632,34 +584,28 @@
                             </div>
                         </div>
                     `;
-                    swiperWrapper.append(swiperSlide); // Add slide to Swiper wrapper
+                    swiperWrapper.append(swiperSlide); 
                 });
 
-                feedbackSwiper.removeClass('d-none'); // Show the Swiper container now that it has content
+                feedbackSwiper.removeClass('d-none'); 
 
-                // Initialize Swiper AFTER content is loaded
         mySwiper = new Swiper('#feedbackSwiper', {
-                // ... (existing parameters) ...
                 slidesPerView: 1,
                 spaceBetween: 30,
                 loop: true,
 
-                // Add this line:
-                autoHeight: true, // Enable auto height for the Swiper container based on current slide
+                autoHeight: true, 
 
-                // Pagination (dots)
                 pagination: {
                     el: '.swiper-pagination',
                     clickable: true,
                 },
 
-                // Navigation arrows
                 navigation: {
                     nextEl: '.swiper-button-next',
                     prevEl: '.swiper-button-prev',
                 },
 
-                // Autoplay (optional)
                 autoplay: {
                     delay: 5000,
                     disableOnInteraction: false,
@@ -668,31 +614,26 @@
             },
             error: function(xhr, status, error) {
                 console.error('Error loading feedback:', xhr.responseText);
-                feedbackLoadingIndicator.addClass('d-none'); // Hide loading
-                feedbackLoadError.removeClass('d-none'); // Show error message
+                feedbackLoadingIndicator.addClass('d-none'); 
+                feedbackLoadError.removeClass('d-none');
             }
         });
     }
     var fetchAndRenderProducts = function() {
         const $productListContainer = $('#product-list-container');
-        // Display a loading message while fetching data
         $productListContainer.html('<p class="text-center text-muted py-5">Loading products...</p>');
 
-        // Make an AJAX request to your Django API endpoint for products
         $.ajax({
-            url: '/api/products/', // Make sure this URL is correctly configured in Django's urls.py
+            url: '/api/products/',
             method: 'GET',
-            dataType: 'json', // Expect a JSON response
+            dataType: 'json',
             success: function(response) {
-                // Check if the response contains products and if there are any
                 if (response && response.length > 0) {
-                    $productListContainer.empty(); // Clear the loading message
+                    $productListContainer.empty(); 
 
-                    // Loop through each product in the response
+                    var item = 0;
                     response.forEach(function(product) {
-                        // Construct the HTML for each product using template literals
-                        // Ensure that product properties (like product.id, product.name, etc.)
-                        // match the keys in the JSON response from your Django API.
+                        if (item>8)return;
                         const productHtml = `
                             <div class="col">
                                 <div class="product-item mb-4">
@@ -706,7 +647,7 @@
                                             <a href="#" class="text-decoration-none open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="${product.id}">${product.name}</a>
                                         </h3>
                                         <div class="d-flex justify-content-center align-items-center gap-2">
-                                            ${product.discounted_price !== null ? // Check if discounted_price exists
+                                            ${product.discounted_price !== null ? 
                                                 `<del>$${product.original_price}</del>
                                                 <span class="text-dark fw-semibold">$${product.discounted_price}</span>` :
                                                 `<span class="text-dark fw-semibold">$${product.original_price}</span>`
@@ -720,7 +661,7 @@
                                                             <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
                                                         </button>
                                                     </span>
-                                                    ${product.stock > 0 ? // Check if product is in stock
+                                                    ${product.stock > 0 ? 
                                                         `<input type="text" id="quantity-${product.id}" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="${product.stock}">` :
                                                         `<input type="text" id="quantity-${product.id}" name="quantity" class="quantity form-control input-number text-center" value="0" min="0" max="${product.stock}" disabled>` // Disable if out of stock
                                                     }
@@ -745,7 +686,8 @@
                             </div>
                         `;
                         $productListContainer.append(productHtml);
-                        initProductQty(); // Reinitialize quantity controls for new products
+                        initProductQty();
+                        item++ 
                     });
                 } else {
                     $productListContainer.html('<div class="col-12 text-center py-5"><p>No products found.</p></div>');
@@ -761,26 +703,19 @@
 
     var fetchAndRenderLatestProducts = function() {
         const $productListContainer = $('#product-order-by-date');
-        // Display a loading message while fetching data
         $productListContainer.html('<p class="text-center text-muted py-5">Loading products...</p>');
 
-        // Make an AJAX request to your Django API endpoint for products
         $.ajax({
-            url: '/api/products/filter/', // Make sure this URL is correctly configured in Django's urls.py
+            url: '/api/products/filter/', 
             method: 'GET',
-            dataType: 'json', // Expect a JSON response
+            dataType: 'json', 
             success: function(response) {
-                // Check if the response contains products and if there are any
                 if (response && response.length > 0) {
-                    $productListContainer.empty(); // Clear the loading message
+                    $productListContainer.empty(); 
 
-                    // Loop through each product in the response
                     var item = 0; 
                     response.forEach(function(product) {
-                        if(item >= 5) return; // Limit to 3 products
-                        // Construct the HTML for each product using template literals
-                        // Ensure that product properties (like product.id, product.name, etc.)
-                        // match the keys in the JSON response from your Django API.
+                        if(item >= 5) return; 
                         const productHtml = `
                             <div class="col">
                                 <div class="product-item mb-4">
@@ -794,7 +729,7 @@
                                             <a href="#" class="text-decoration-none open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="${product.id}">${product.name}</a>
                                         </h3>
                                         <div class="d-flex justify-content-center align-items-center gap-2">
-                                            ${product.discounted_price !== null ? // Check if discounted_price exists
+                                            ${product.discounted_price !== null ? 
                                                 `<del>$${product.original_price}</del>
                                                 <span class="text-dark fw-semibold">$${product.discounted_price}</span>` :
                                                 `<span class="text-dark fw-semibold">$${product.original_price}</span>`
@@ -808,7 +743,7 @@
                                                             <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
                                                         </button>
                                                     </span>
-                                                    ${product.stock > 0 ? // Check if product is in stock
+                                                    ${product.stock > 0 ? 
                                                         `<input type="text" id="quantity-${product.id}" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="${product.stock}">` :
                                                         `<input type="text" id="quantity-${product.id}" name="quantity" class="quantity form-control input-number text-center" value="0" min="0" max="${product.stock}" disabled>` // Disable if out of stock
                                                     }
@@ -834,7 +769,7 @@
                         `;
                         $productListContainer.append(productHtml);
                         initProductQty(); 
-                        item++;// Reinitialize quantity controls for new products
+                        item++;
                     });
                 } else {
                     $productListContainer.html('<div class="col-12 text-center py-5"><p>No products found.</p></div>');
@@ -848,27 +783,26 @@
     };
 
     function loadRecentBlogPosts() {
-        console.log('Loading recent blog posts...'); // Debugging log
+        console.log('Loading recent blog posts...'); 
         const container = $('#recent-blog-posts-container');
         const loadingIndicator = $('#blog-loading-indicator');
         const noPostsMessage = $('#no-blog-posts-message');
         const loadError = $('#blog-load-error');
 
-        // Show loading indicator, hide other states
         loadingIndicator.removeClass('d-none');
-        container.empty(); // Clear any existing content
+        container.empty(); 
         noPostsMessage.addClass('d-none');
         loadError.addClass('d-none');
 
         $.ajax({
-            url: `/api/posts/recent/`, // Your API endpoint for recent posts
+            url: `/api/posts/recent/`,
             type: 'GET',
-            dataType: 'json', // Expect JSON response
+            dataType: 'json', 
             success: function(data) {
-                loadingIndicator.addClass('d-none'); // Hide loading indicator
+                loadingIndicator.addClass('d-none'); 
 
                 if (data.length === 0) {
-                    noPostsMessage.removeClass('d-none'); // Show 'no posts' message
+                    noPostsMessage.removeClass('d-none'); 
                     return;
                 }
                 var item = 0
@@ -880,7 +814,6 @@
                         day: 'numeric'
                     });
 
-                    // Determine image source
                     const imageUrl = post.image ? post.image : "{% static 'img/default_blog_image.jpg' %}";
                     const categoryName = post.category ? post.category.name.toUpperCase() : 'UNCATEGORIZED';
 
@@ -908,24 +841,23 @@
             error: function(xhr, status, error) {
                 console.error('Error fetching recent blog posts:', xhr.responseText);
                 loadingIndicator.addClass('d-none');
-                loadError.removeClass('d-none'); // Show error message
+                loadError.removeClass('d-none'); 
             }
         });
     }
-    // Document ready block (all initializations should go here)
     $(document).ready(function() {
         initPreloader();
         initTextFx();
         initSwiper();
         initJarallax();
         initChocolat();
-        initProductQuickViewModal(); // Initialize the modal quick view
+        initProductQuickViewModal(); 
         initModalProductQty(); 
         initAddToCart(); 
         fetchAndRenderCartDetails();
         fetchAndRenderProducts();
         initCartItemControls(); 
-        loadFeedbackSwiper(); // Load feedback swiper
+        loadFeedbackSwiper(); 
         loadRecentBlogPosts();
         fetchAndRenderLatestProducts();
     });

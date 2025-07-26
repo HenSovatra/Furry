@@ -113,7 +113,6 @@
                 {% for category in top_level_categories %}
                     {% if category.is_active %}
                         {% if category.subcategories.all %}
-                            {# This is a parent category with a collapsible sub-menu (like "Health products") #}
                             <li class="nav-item position-relative">
                                 <a class="btn btn-toggle dropdown-toggle w-100 d-flex justify-content-between align-items-center p-2"
                                   data-bs-toggle="collapse" data-bs-target="#collapse-{{ category.id }}" aria-expanded="false">
@@ -139,7 +138,6 @@
                                 </div>
                             </li>
                         {% else %}
-                            {# This is a regular top-level category without sub-menus #}
                             <li class="nav-item">
                                 <a href="/category/?id={{ category.id }}" class="nav-link d-flex align-items-center gap-3 p-2">
                                     {% if category.icon_id %}
@@ -153,7 +151,6 @@
                         {% endif %}
                     {% endif %}
                 {% empty %}
-                    {# Optional: Content to display if no categories are found #}
                     <li class="nav-item">No categories available.</li>
                 {% endfor %}
             </ul>
@@ -212,24 +209,18 @@
                 <p class="mt-2">Loading user feedback...</p>
             </div>
 
-            <!-- Swiper container (initially hidden) -->
             <div class="swiper testimonial-swiper d-none" id="feedbackSwiper" >
                 <div class="swiper-wrapper" id="swiper-wrapper-content" style="height:500px">
-                    <!-- Swiper slides (feedback items) will be injected here by JavaScript -->
                 </div>
-                <!-- Add Pagination -->
                 <div class="swiper-pagination"></div>
 
-                <!-- Add Navigation (Prev/Next buttons) -->
                 <div class="swiper-button-next"></div>
                 <div class="swiper-button-prev"></div>
             </div>
 
-            <!-- Message if no feedback is found -->
             <div id="no-feedback-message" class="text-center text-muted p-5 d-none">
                 No feedback submitted yet. Be the first!
             </div>
-            <!-- Error message if feedback loading fails -->
             <div id="feedback-load-error" class="alert alert-danger d-none" role="alert">
                 Failed to load feedback. Please try again later.
             </div>
@@ -304,23 +295,18 @@
           <a href="/blog" class="btn btn-sm btn-outline-primary">View All</a>
       </div>
 
-      <!-- Container for blog posts -->
       <div class="row" id="recent-blog-posts-container">
-          <!-- Loading indicator -->
           <div class="col-12 text-center p-5" id="blog-loading-indicator">
               <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading blog posts...</span>
               </div>
               <p class="mt-2">Loading recent blog posts...</p>
           </div>
-          <!-- Posts will be injected here by jQuery -->
       </div>
 
-      <!-- Message if no posts are found -->
       <div class="col-12 text-center text-muted p-5 d-none" id="no-blog-posts-message">
           No recent blog posts found.
       </div>
-      <!-- Error message if loading fails -->
       <div class="col-12 alert alert-danger d-none" role="alert" id="blog-load-error">
           Failed to load blog posts. Please try again later.
       </div>

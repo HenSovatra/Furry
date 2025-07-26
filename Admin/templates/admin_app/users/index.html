@@ -17,6 +17,19 @@
                     <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">Add New User</button>
                 </div>
                 <div class="card-body">
+                    {% if success_message %}
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ success_message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+                    {% if error_message %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ error_message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+
                     <div class="table-responsive">
                         <table class="table align-items-center mb-0">
                             <thead>
@@ -48,12 +61,21 @@
                                         <p class="text-xs font-weight-bold mb-0">{{ user.date_joined|date:"Y-m-d" }}</p>
                                     </td>
                                     <td class="align-middle">
-                                        <a href="#" class="text-secondary font-weight-bold text-xs" data-toggle="tooltip" data-original-title="Edit user">
+                                        <a href="#" class="text-secondary font-weight-bold text-xs me-3 edit-user-btn"
+                                           data-bs-toggle="modal"
+                                           data-bs-target="#editUserModal"
+                                           data-user-id="{{ user.id }}"
+                                           data-user-username="{{ user.username }}"
+                                           data-user-email="{{ user.email }}"
+                                           data-user-is-staff="{{ user.is_staff|yesno:'true,false' }}">
                                             Edit
                                         </a> |
-                                        <a href="#" class="text-secondary font-weight-bold text-xs text-danger" data-toggle="tooltip" data-original-title="Delete user">
-                                            Delete
-                                        </a>
+                                        <form action="{% url 'Admin:user_delete' pk=user.id %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete user {{ user.username }}? This action cannot be undone.');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="text-danger font-weight-bold text-xs" style="background: none; border: none; padding: 0; cursor: pointer;">
+                                                Delete
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                                 {% empty %}
@@ -78,7 +100,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" action="#"> {# Action to your user creation view #}
+                <form method="post" action="{% url 'Admin:user_create' %}">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
@@ -91,6 +113,10 @@
                     <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
                         <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
                     </div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" value="True" id="is_staff" name="is_staff">
@@ -105,4 +131,87 @@
     </div>
 </div>
 
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm" method="post" action=""> 
+                    {% csrf_token %}
+                    <input type="hidden" id="edit_user_id" name="user_id">
+                    <div class="mb-3">
+                        <label for="edit_username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="edit_username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="edit_email" name="email">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_password" class="form-label">New Password (leave blank to keep current)</label>
+                        <input type="password" class="form-control" id="edit_password" name="password">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="True" id="edit_is_staff" name="is_staff">
+                        <label class="form-check-label" for="edit_is_staff">
+                            Is Staff
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update User</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+ <script>
+    if (typeof jQuery == 'undefined') {
+        console.error('jQuery is not loaded! Please ensure jQuery is included in base.html before this script.');
+    } else {
+        $(document).ready(function() {
+
+            var $editUserModal = $('#editUserModal');
+
+            if ($editUserModal.length > 0) { 
+                $editUserModal.on('show.bs.modal', function (event) {
+
+                    var $button = $(event.relatedTarget);
+                    var userId = $button.data('user-id');
+                    var userUsername = $button.data('user-username');
+                    var userEmail = $button.data('user-email');
+                    var userIsStaff = $button.data('user-is-staff');
+
+                    var $modalTitle = $editUserModal.find('.modal-title');
+                    var $form = $editUserModal.find('#editUserForm');
+                    var $usernameInput = $editUserModal.find('#edit_username');
+                    var $emailInput = $editUserModal.find('#edit_email');
+                    var $isStaffCheckbox = $editUserModal.find('#edit_is_staff');
+                    var $passwordInput = $editUserModal.find('#edit_password'); 
+
+                    if ($modalTitle.length > 0) $modalTitle.text('Edit User: ' + userUsername);
+                    if ($usernameInput.length > 0) $usernameInput.val(userUsername);
+                    if ($emailInput.length > 0) $emailInput.val(userEmail);
+                    if ($isStaffCheckbox.length > 0) $isStaffCheckbox.prop('checked', userIsStaff); 
+
+                    if ($form.length > 0 && userId) {
+                        var formActionUrl = "{% url 'Admin:user_update' pk=0 %}".replace('/0/', '/' + userId + '/');
+                        $form.attr('action', formActionUrl);
+                    } else {
+                        console.error('Form element or User ID is missing, cannot set action.');
+                    }
+
+                    if ($passwordInput.length > 0) $passwordInput.val('');
+
+                });
+            } else {
+                console.error('Edit User Modal element with ID #editUserModal not found!'); 
+            }
+        });
+    }
+  </script>
 {% endblock content %}
+
+  

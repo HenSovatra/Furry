@@ -42,10 +42,8 @@
 
             <div class="mt-5">
                 <a href="{% url 'PetStore:home' %}" class="btn btn-primary btn-lg me-3">Continue Shopping</a>
-                {# Optionally, a link to view order history if authenticated #}
                 {% if user.is_authenticated %}
                 <a href="{% url 'PetStore:history' %}" class="btn btn-outline-secondary btn-lg">View Order History</a>
-                {# Replace 'your_app_name:order_history' with your actual URL #}
                 {% endif %}
             </div>
         </div>

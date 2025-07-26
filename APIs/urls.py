@@ -21,13 +21,11 @@ urlpatterns = [
     path('order-history/', views.order_history_api, name='order_history_api'),
     path('register-customers/', RegisteredCustomerAPIView.as_view(), name='register-customers'),
     path('products-category/<int:category_id>/', views.products_by_category_api, name='api_products_by_category'),
-    path('feedback/submit/', FeedbackAPIView.as_view(), name='feedback_submit_api'), # For POST
-    path('feedback/', get_feedback_api, name='api_get_feedback'), # For GET (to retrieve all feedback)
-
+    path('feedback/submit/', FeedbackAPIView.as_view(), name='feedback_submit_api'), 
+    path('feedback/', get_feedback_api, name='api_get_feedback'), 
+    path('orders/<int:order_id>/update_status/', views.update_order_status, name='update_order_status'),
 ]
 
-
-# New Admin API Router and URLs
 router = DefaultRouter()
 router.register(r'admin/products', views.ProductAdminViewSet)
 router.register(r'admin/customers', views.CustomerViewSet)
@@ -35,5 +33,4 @@ router.register(r'admin/orders', views.OrderAdminViewSet)
 router.register(r'admin/billings', views.BillingViewSet)
 router.register(r'admin/categories', views.CategoryViewSet)
 router.register(r'posts', PostViewSet)
-# Append the Admin API URLs to the existing urlpatterns
 urlpatterns += router.urls

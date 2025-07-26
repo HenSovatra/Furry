@@ -83,9 +83,9 @@
                                                 <div class="form-group mb-3">
                                                     <label for="post_body_{{ forloop.counter }}">Request Body (JSON):</label>
                                                     <textarea id="post_body_{{ forloop.counter }}" class="form-control" rows="5">{
-    "key": "value",
-    "another_key": "another_value"
-}</textarea>
+                                                    "key": "value",
+                                                    "another_key": "another_value"
+                                                }</textarea>
                                                 </div>
                                                 <button class="btn btn-outline-info btn-sm mb-3" type="button" onclick="testPostEndpoint('{{ route.url }}', 'post_body_{{ forloop.counter }}', 'post_result_{{ forloop.counter }}', '{% csrf_token %}')">Send POST</button>
                                                 <pre><code class="language-json" id="post_result_{{ forloop.counter }}">No result yet.</code></pre>
@@ -198,7 +198,6 @@ fetch('/admin/dynamic-api/products/', {
         }
     }
 
-    // Initialize tooltips (if you have Bootstrap's JS)
     document.addEventListener('DOMContentLoaded', function () {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

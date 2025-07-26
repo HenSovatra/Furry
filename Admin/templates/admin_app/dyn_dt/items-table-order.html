@@ -77,7 +77,6 @@
                         <p class="text-sm"><strong>Payment Method:</strong> {{ item.payment_method }}</p>
                         
                         <h6 class="mt-4">Order Items:</h6>
-                        {{ item }} items
                         {% if item.order_items.all %} {# Assuming 'order_items' as related_name #}
                             <div class="table-responsive">
                                 <table class="table table-bordered">
@@ -306,3 +305,65 @@
         {% endfor %}
     </tbody>
 </table>
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+
+    function updateOrderStatus(selectElement, orderId) {
+        const newStatus = selectElement.value;
+        console.log(`Attempting to update Order ID: ${orderId} to Status: ${newStatus}`);
+        const url = `/api/orders/${orderId}/update_status/`; 
+
+        fetch(url, {
+            method: 'POST', 
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken, 
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus }) 
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    console.error('Error response from server:', errorData);
+                    throw new Error(`HTTP error! status: ${response.status} - ${JSON.stringify(errorData)}`);
+                });
+            }
+            return response.json(); 
+        })
+        .then(data => {
+            console.log('Status updated successfully:', data);
+            alert('Order status updated successfully!');
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+            selectElement.value = selectElement.getAttribute('data-original-status');
+            alert('Failed to update order status. Please try again.');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('#products-table select').forEach(select => {
+            select.setAttribute('data-original-status', select.value);
+            select.addEventListener('change', function() {
+                updateOrderStatus(this, this.closest('tr').querySelector('td p').textContent);
+            });
+        });
+    });
+
+</script>

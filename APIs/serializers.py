@@ -1,16 +1,11 @@
 # Furry/APIs/serializers.py
 from rest_framework import serializers
-from datetime import datetime, timezone # Make sure this import is present if you use default=timezone.now
 from django.contrib.auth.models import User
 from Admin.models import Order, OrderItem 
-from django.db.models import Sum
-# Explicitly import models from PetStore.models with an alias for Product
 from PetStore.models import Product as PetStoreProduct, Category, Cart, CartItem, Order, OrderItem, Feedback, FeedbackImage, Post
-# Explicitly import models from Admin.models
 from Admin.models import Customer, Billing
-from django.db import transaction # Import transaction for atomic operations
+from django.db import transaction 
 from Admin.models import Customer 
-# --- Teammate's Existing Serializers (UPDATED to use PetStoreProduct) ---
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = PetStoreProduct
@@ -37,36 +32,27 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = '__all__'
 
-# --- New Admin-Specific Serializers (MODIFIED ProductAdminSerializer) ---
-
-# Ensure CategorySerializer is defined before ProductAdminSerializer if nested
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name']
 
 class ProductAdminSerializer(serializers.ModelSerializer):
-    # For READ operations (output) - sends the full nested category
     category = CategorySerializer(read_only=True)
     
-    # For WRITE operations (input) - accepts just the category ID
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
-        source='category', # Maps this field to the 'category' ForeignKey
-        write_only=True    # This field is only for input, not for output
+        source='category', 
+        write_only=True    
     )
 
-    # IMPORTANT CHANGE FOR created_at:
-    # If your PetStoreProduct model has created_at = models.DateTimeField(auto_now_add=True),
-    # then set it to read_only=True here. The API will handle populating it.
-    # It will still be formatted as DD/MM/YY for output.
     created_at = serializers.DateTimeField(format="%d/%m/%y", read_only=True) 
 
     image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = PetStoreProduct
-        fields = '__all__' # Includes both 'category' (read) and 'category_id' (write), and 'created_at' (read-only)
+        fields = '__all__' 
 
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -147,10 +133,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
     class Meta:
         model = OrderItem
-        fields = '__all__' # Or specify the fields you need, e.g., ['product', 'quantity', 'price']
+        fields = '__all__' 
 
 class OrderSerializer(serializers.ModelSerializer):
-    # This is the key part: define a field to include nested order items
     order_items = OrderItemSerializer(many=True, read_only=True)
 
     class Meta:
@@ -159,7 +144,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class OrderHistorySerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True) # Nested serializer for order items
+    items = OrderItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -167,7 +152,6 @@ class OrderHistorySerializer(serializers.ModelSerializer):
             'id', 'user', 'session_key', 'total_amount', 'shipping_cost', 'status', 'payment_status',
             'first_name', 'last_name', 'email', 'phone',
             'address_line_1', 'address_line_2', 'city', 'state', 'zip_code', 'country',
-            # Include billing if you want it in the history API
             'billing_first_name', 'billing_last_name', 'billing_email', 'billing_phone',
             'billing_address_line_1', 'billing_address_line_2', 'billing_city', 'billing_state',
             'billing_zip_code', 'billing_country',

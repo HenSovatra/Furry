@@ -1,5 +1,3 @@
-# myproject/blog/views.py
-
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import *
 import json
@@ -37,7 +35,7 @@ def HistoryView(request):
     return render(request, 'history.html', context)     
 
 def FeedbackView(request):
-    template_name = 'feedback.html' # This should match your template file name
+    template_name = 'feedback.html'
 
     form = FeedbackForm() 
     context = {
@@ -90,7 +88,7 @@ def product_quick_view(request, pk):
 
 
 @require_POST
-@csrf_exempt # For simplicity during development, but use CsrfViewMiddleware in production
+@csrf_exempt 
 def add_to_cart(request):
     try:
         data = json.loads(request.body)
@@ -107,34 +105,29 @@ def add_to_cart(request):
     except Exception:
         return JsonResponse({'success': False, 'error': 'Product not found or not active.'}, status=404)
 
-    # Validate quantity
     if not isinstance(quantity, int) or quantity < 1:
         return JsonResponse({'success': False, 'error': 'Quantity must be a positive integer.'}, status=400)
 
     if product.stock < quantity:
         return JsonResponse({'success': False, 'error': f'Not enough stock for {product.name}. Available: {product.stock}'}, status=400)
 
-    # Get or create cart
     cart = None
     if request.user.is_authenticated:
         cart, created = Cart.objects.get_or_create(user=request.user)
     else:
-        # Use session key for anonymous users
         session_key = request.session.session_key
         if not session_key:
-            request.session.save() # Ensure session key exists
+            request.session.save() 
             session_key = request.session.session_key
         cart, created = Cart.objects.get_or_create(session_key=session_key)
 
-    # Add/Update cart item
     cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
     if not created:
         cart_item.quantity += quantity
     else:
-        cart_item.quantity = quantity # If newly created, set quantity directly
+        cart_item.quantity = quantity 
     cart_item.save()
 
-    # Update total items in session for easy access in templates
     request.session['cart_total_items'] = cart.total_items
 
     return JsonResponse({
@@ -145,13 +138,12 @@ def add_to_cart(request):
             'id': product.pk,
             'name': product.name,
             'image_url': product.image.url,
-            'quantity': cart_item.quantity, # Current quantity of this item in cart
-            'price': float(product.original_price), # Convert Decimal to float for JSON
+            'quantity': cart_item.quantity, 
+            'price': float(product.original_price),
             'total_item_price': float(cart_item.total_price),
         }
     })
 
-# New view to get cart details for the dialog
 def get_cart_details(request):
     cart = None
     if request.user.is_authenticated:
@@ -179,7 +171,7 @@ def get_cart_details(request):
         'cart_total_items': cart.total_items if cart else 0,
     })
 
-@csrf_protect # Good practice for rendering forms that will POST
+@csrf_protect 
 def checkout_view(request):
     cart = None
     if request.user.is_authenticated:
@@ -190,10 +182,7 @@ def checkout_view(request):
             cart = Cart.objects.filter(session_key=session_key).first()
 
     if not cart or cart.items.count() == 0:
-        return redirect('PetStore:home') # Redirect to cart view or home
-
-    # No context data related to cart passed here.
-    # The checkout.html template will fetch it via JS.
+        return redirect('PetStore:home') 
     return render(request, 'checkout.html')
 
 @authentication_classes([TokenAuthentication, SessionAuthentication])
@@ -201,7 +190,7 @@ def order_confirmation_view(request, order_id=None):
     print(f"DEBUG: request.user: {request.user}")
     print(f"DEBUG: request.user.is_authenticated: {request.user.is_authenticated}")
     print(f"DEBUG: Session key: {request.session.session_key}")
-    print(f"DEBUG: Session data: {request.session.items()}") # See what's actually in the session
+    print(f"DEBUG: Session data: {request.session.items()}") 
     order = None
     if order_id:
         if request.user.is_authenticated:   

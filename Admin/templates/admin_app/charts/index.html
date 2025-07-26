@@ -31,7 +31,7 @@
 
         
         
-        <div class="col-sm-12 col-md-5 mb-4"> {# Adjusted col size to fit next to the new chart #}
+        <div class="col-sm-12 col-md-5 mb-4"> 
             <div class="card">
                 <div class="card-header">
                     <h5>Bar Chart</h5>
@@ -42,7 +42,7 @@
             </div>
         </div>
         
-        <div class="col-sm-12 col-md-6 mb-4"> {# Added mb-4 for spacing #}
+        <div class="col-sm-12 col-md-6 mb-4"> 
             <div class="card">
                 <div class="card-header">
                     <h5>Pie Chart</h5>
@@ -65,7 +65,6 @@
                 product growth
             </p>
 
-            {# --- NEW UI FOR CHART PERIOD SELECTION --- #}
             <div
                 class="btn-group btn-group-sm mt-3"
                 role="group"
@@ -100,7 +99,6 @@
                     Yearly
                 </button>
             </div>
-            {# --- END NEW UI --- #}
         </div>
         <div class="card-body p-3">
             <div class="chart">
@@ -170,10 +168,8 @@
     chartPie.render();
 </script>
 
-{# Chart.js for Product Overview Line Chart #}
 <script src="{% static 'assets/js/plugins/chartjs.min.js' %}"></script>
 <script>
-    // Store all aggregated data received from Django
     const allChartData = {
         daily: {{ daily_product_data|safe }},
         weekly: {{ weekly_product_data|safe }},
@@ -181,23 +177,18 @@
         yearly: {{ yearly_product_data|safe }}
     };
 
-    let productChart; // Declare a variable to hold the chart instance
-
-    // Function to update the chart data
+    let productChart; 
     function updateProductChart(period) {
         const dataForPeriod = allChartData[period];
         const labels = dataForPeriod.map(item => item.label);
         const values = dataForPeriod.map(item => item.value);
-
-        // Update chart data and labels
         productChart.data.labels = labels;
         productChart.data.datasets[0].data = values;
         productChart.data.datasets[0].label = `Total Products (${period.charAt(0).toUpperCase() + period.slice(1)})`; // Update dataset label
 
-        productChart.update(); // Re-render the chart
+        productChart.update(); 
     }
 
-    // --- Chart Initialization ---
     var ctx1 = document.getElementById("chart-line").getContext("2d");
 
     var gradientStroke1 = ctx1.createLinearGradient(0, 230, 0, 50);
@@ -205,7 +196,6 @@
     gradientStroke1.addColorStop(0.2, "rgba(94, 114, 228, 0.0)");
     gradientStroke1.addColorStop(0, "rgba(94, 114, 228, 0)");
 
-    // Initialize the chart with daily data by default
     const initialData = allChartData.daily;
     const initialLabels = initialData.map(item => item.label);
     const initialValues = initialData.map(item => item.value);
@@ -216,7 +206,7 @@
             labels: initialLabels,
             datasets: [
                 {
-                    label: "Total Products (Daily)", // Initial label
+                    label: "Total Products (Daily)", 
                     tension: 0.4,
                     borderWidth: 0,
                     pointRadius: 0,
@@ -286,14 +276,10 @@
         },
     });
 
-    // Event listeners for period selection buttons
     document.querySelectorAll('.chart-period-btn').forEach(button => {
         button.addEventListener('click', function() {
-            // Remove 'active' from all buttons
             document.querySelectorAll('.chart-period-btn').forEach(btn => btn.classList.remove('active'));
-            // Add 'active' to the clicked button
             this.classList.add('active');
-            // Update chart with the selected period
             updateProductChart(this.dataset.period);
         });
     });

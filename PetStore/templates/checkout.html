@@ -5,7 +5,6 @@
     <h2 class="mb-4 text-center">Checkout</h2>
 
     <div class="row">
-        {# Cart Summary Column - Placeholder for JS rendering #}
         <div class="col-lg-6 order-lg-2 mb-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
@@ -18,8 +17,6 @@
                 </div>
             </div>
         </div>
-
-        {# Shipping and Payment Form Column #}
         <div class="col-lg-6 order-lg-1">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
@@ -61,10 +58,21 @@
                                 <label for="country" class="form-label">Country</label>
                                 <select class="form-select" id="country" name="country" required>
                                     <option value="">Choose...</option>
-                                    <option value="US" selected>United States</option> {# Pre-select US #}
+                                    <option value="KH" selected>Cambodia</option> 
+                                    <option value="US" >United States</option>
                                     <option value="CA">Canada</option>
                                     <option value="GB">United Kingdom</option>
                                     <option value="AU">Australia</option>
+                                    <option value="CN">China</option>
+                                    <option value="IN">India</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="KR">South Korea</option>
+                                    <option value="ID">Indonesia</option>
+                                    <option value="PH">Philippines</option>
+                                    <option value="TH">Thailand</option>
+                                    <option value="VN">Vietnam</option>
+                                    <option value="MY">Malaysia</option>
+                                    <option value="SG">Singapore</option>
                                     <option value="OTHER">Other</option>
                                 </select>
                             </div>
@@ -151,12 +159,11 @@
                                 <label class="form-check-label" for="credit">Credit card</label>
                             </div>
                             <div class="form-check">
-                                <input id="paypal" name="paymentMethod" type="radio" class="form-check-input" value="paypal" required disabled> {# Keep PayPal disabled for now #}
+                                <input id="paypal" name="paymentMethod" type="radio" class="form-check-input" value="paypal" required disabled> 
                                 <label class="form-check-label" for="paypal">PayPal</label>
                             </div>
                         </div>
 
-                        {# Stripe Card Element Div #}
                         <div class="col-12 mt-3" id="stripe-card-section">
                             <label for="card-element" class="form-label">Credit or debit card</label>
                             <div id="card-element" class="form-control p-2" style="min-height: 40px;">
@@ -172,14 +179,12 @@
             </div>
         </div>
     </div>
-    {# Add a div for general checkout messages #}
     <div id="checkout-messages" class="mt-4"></div>
 </div>
 
 
 {% include "scripts.html" %}
 
-{# NEW: Stripe.js v3 Library #}
 <script src="https://js.stripe.com/v3/"></script>
 
 <script>
@@ -191,9 +196,7 @@
         const $placeOrderBtn = $('#place-order-btn');
         const $checkoutCartSummary = $('#checkout-cart-summary');
         const $cardErrorsDiv = $('#card-errors');
-        const $checkoutMessagesDiv = $('#checkout-messages'); // Ensure this div exists in HTML, or add it for messages
-
-        // Function to get CSRF token from cookie (re-used from main.js or defined here)
+        const $checkoutMessagesDiv = $('#checkout-messages'); 
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -209,16 +212,14 @@
             return cookieValue;
         }
 
-        // Function to toggle required attribute for billing fields
         function toggleRequiredFields(fields, isRequired) {
             fields.each(function() {
-                if ($(this).attr('name') !== 'billing_phone') { // Phone is optional
+                if ($(this).attr('name') !== 'billing_phone') { 
                     $(this).prop('required', isRequired);
                 }
             });
         }
 
-        // Initial state: billing address hidden by default since checkbox is checked
         $billingAddressSection.hide();
         toggleRequiredFields($billingFields, false);
 
@@ -233,7 +234,6 @@
             }
         });
 
-        // Function to copy shipping address to billing address
         function copyShippingToBilling() {
             $('#billing_first_name').val($('#first_name').val());
             $('#billing_last_name').val($('#last_name').val());
@@ -247,17 +247,9 @@
             $('#billing_city').val($('#city').val());
         }
 
-        // --- NEW: Stripe Integration START ---
-
-        // Initialize Stripe with your publishable key
-        // Make sure settings.STRIPE_PUBLISHABLE_KEY is passed from Django context
-        // IMPORTANT: In a real production environment, you would use a Django template tag
-        // or a JavaScript variable passed from the view to inject the public key.
-        // For now, I'm using the one from your code.
         const stripe = Stripe('pk_test_51RnMacFSxjjrivZyTYtGMlZDLjNkxBrLCLq6v5rHp6ycQSBNwGA8UUQyPRZodSEocjcUUHoJdlGnSOHPqN76QFon00amyqL8FC');
         const elements = stripe.elements();
 
-        // Create an instance of the card Element.
         const card = elements.create('card', {
             style: {
                 base: {
@@ -274,10 +266,8 @@
             },
         });
 
-        // Add an instance of the card Element into the `card-element` div.
         card.mount('#card-element');
 
-        // Handle real-time validation errors from the card Element.
         card.on('change', function(event) {
             if (event.error) {
                 $cardErrorsDiv.text(event.error.message);
@@ -286,11 +276,9 @@
             }
         });
 
-        // --- NEW: Handle form submission via AJAX with Stripe (NO AUTH TOKEN) ---
         $checkoutForm.on('submit', async function(event) {
             event.preventDefault();
 
-            // Clear previous messages
             $checkoutMessagesDiv.html('');
             $cardErrorsDiv.html('');
 
@@ -300,7 +288,6 @@
                 return;
             }
 
-            // If PayPal is selected, prevent Stripe logic for now
             if ($('input[name="paymentMethod"]:checked').val() === 'paypal') {
                 $checkoutMessagesDiv.html('<div class="alert alert-warning">PayPal is not yet integrated. Please select Credit Card.</div>');
                 return;
@@ -323,7 +310,6 @@
                 }
             });
 
-            // Copy shipping to billing if checkbox is checked
             if ($sameAddressCheckbox.is(':checked')) {
                 formData['billing_first_name'] = formData['first_name'];
                 formData['billing_last_name'] = formData['last_name'];
@@ -338,14 +324,13 @@
             }
 
             try {
-                // Step 1: Create a PaymentMethod from the card Element
                 const { paymentMethod, error: createPaymentMethodError } = await stripe.createPaymentMethod({
                     type: 'card',
                     card: card,
                     billing_details: {
                         name: `${formData.first_name} ${formData.last_name}`,
                         email: formData.email,
-                        phone: formData.phone, // Include phone from form
+                        phone: formData.phone, 
                         address: {
                             line1: formData.billing_address_line_1,
                             line2: formData.billing_address_line_2,
@@ -363,15 +348,13 @@
                     return;
                 }
 
-                // Step 2: Send paymentMethod.id and shipping info to your backend to create a PaymentIntent
                 formData.payment_method_id = paymentMethod.id;
 
                 const initialResponse = await fetch('{% url "APIs:api-place-order" %}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken') // Always send CSRF token for POST
-                        // NO 'Authorization' header here for guest checkout
+                        'X-CSRFToken': getCookie('csrftoken') 
                     },
                     body: JSON.stringify(formData)
                 });
@@ -384,22 +367,16 @@
                     return;
                 }
 
-                // If the backend indicates payment requires client confirmation (i.e., it returned client_secret)
                 if (initialData.client_secret) {
-                    // Step 3: Confirm the PaymentIntent client-side using the client_secret
                     const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(initialData.client_secret, {
-                        // NO payment_method here. The PaymentIntent already has it from the first call.
-                        // If 3D Secure is required, Stripe.js will automatically handle the redirect/popup.
                     });
 
                     if (confirmError) {
                         $checkoutMessagesDiv.html(`<div class="alert alert-danger">Payment failed: ${confirmError.message}</div>`);
                         $placeOrderBtn.prop('disabled', false).text('Place Order');
                     } else if (paymentIntent.status === 'succeeded') {
-                        // Step 4: Payment succeeded, send payment_intent_id to backend to finalize order
-                        // This re-calls the same API, but now with payment_intent_id
                         formData.payment_intent_id = paymentIntent.id;
-                        delete formData.payment_method_id; // No longer needed for this final call
+                        delete formData.payment_method_id; 
 
                         $placeOrderBtn.text('Finalizing Order...');
 
@@ -408,7 +385,6 @@
                             headers: {
                                 'Content-Type': 'application/json',
                                 'X-CSRFToken': getCookie('csrftoken')
-                                // NO 'Authorization' header here
                             },
                             body: JSON.stringify(formData)
                         });
@@ -417,25 +393,19 @@
 
                         if (finalizeResponse.ok && finalizeData.success) {
                             $checkoutMessagesDiv.html(`<div class="alert alert-success">${finalizeData.message}</div>`);
-                            // Redirect to order confirmation page
                             window.location.href = finalizeData.redirect_url;
                         } else {
                             $checkoutMessagesDiv.html(`<div class="alert alert-danger">Order finalization failed: ${finalizeData.error || 'Unknown error'}</div>`);
                             $placeOrderBtn.prop('disabled', false).text('Place Order');
                         }
                     } else {
-                        // PaymentIntent status is not 'succeeded' but also not an immediate error (e.g., 'requires_action' without action)
                         $checkoutMessagesDiv.html(`<div class="alert alert-warning">Payment not succeeded: ${paymentIntent.status}. Please try again.</div>`);
                         $placeOrderBtn.prop('disabled', false).text('Place Order');
                     }
                 } else if (initialData.success) {
-                    // This branch might be hit if the payment intent was already succeeded on the first call
-                    // (e.g., if there's no 3D Secure or other required action for the payment method).
-                    // In your backend, you've handled this by redirecting immediately.
                     $checkoutMessagesDiv.html(`<div class="alert alert-success">${initialData.message}</div>`);
                     window.location.href = initialData.redirect_url;
                 } else {
-                    // Generic error from the initial backend call
                     $checkoutMessagesDiv.html(`<div class="alert alert-danger">Error: ${initialData.error || 'Unknown error'}</div>`);
                     $placeOrderBtn.prop('disabled', false).text('Place Order');
                 }
@@ -447,20 +417,18 @@
             }
         });
 
-        // --- Fetch and render cart summary for checkout page (NO AUTH TOKEN) ---
         var fetchAndRenderCheckoutCartSummary = function() {
             $checkoutCartSummary.html('<p class="text-center text-muted">Loading cart summary...</p>');
 
-            // Headers for guest cart: Only CSRF token
             let headers = {
                 'X-CSRFToken': getCookie('csrftoken')
             };
 
             $.ajax({
-                url: '{% url "APIs:api-cart-details" %}', // Your cart details API
+                url: '{% url "APIs:api-cart-details" %}', 
                 method: 'GET',
                 dataType: 'json',
-                headers: headers, // Only includes CSRF, no Authorization
+                headers: headers, 
                 success: function(response) {
                     let summaryHtml = '';
                     if (response.cart_items && response.cart_items.length > 0) {
@@ -516,12 +484,6 @@
             });
         };
 
-        // Initial call to fetch and render cart summary when checkout page loads
         fetchAndRenderCheckoutCartSummary();
-
-        // No need to pre-fill user-specific data if not authenticated, or
-        // only pre-fill if 'user.is_authenticated' is true.
-        // The existing `value="{% if user.is_authenticated %}{{ user.first_name }}{% endif %}"`
-        // will handle this automatically.
     });
 </script>

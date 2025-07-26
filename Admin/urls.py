@@ -17,6 +17,9 @@ urlpatterns = [
     path('charts/', views.charts, name='charts'),
     path('billing/', views.billing, name='billing'),
     path('user-management/', views.user_management, name='user_management'),
+    path('user-management/create/', views.user_create_view, name='user_create'),
+    path('user-management/update/<int:pk>/', views.user_update_view, name='user_update'),
+    path('user-management/delete/<int:pk>/', views.user_delete_view, name='user_delete'),
 
     path('create-hide-show-items/<str:link>/', views.create_hide_show_items_view, name='create-hide-show-items'),
     path('create-page-items/<str:link>/', views.create_page_items_view, name='create-page-items'),

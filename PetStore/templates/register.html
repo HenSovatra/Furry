@@ -10,7 +10,7 @@
                 <div class="card-body p-4">
                     <div id="alert-messages-register" class="mb-3"></div>
                     <form id="register-form" class="needs-validation" novalidate>
-                        {% csrf_token %} {# Still good practice for initial page load, though API might not strictly need it for POST to AllowAny #}
+                        {% csrf_token %} 
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
                             <input type="text" class="form-control" id="username" name="username" required>
@@ -50,7 +50,6 @@
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
@@ -67,7 +66,7 @@
         const password = document.getElementById('password').value;
         const password2 = document.getElementById('password2').value;
         const messagesDiv = document.getElementById('alert-messages-register');
-        messagesDiv.innerHTML = ''; // Clear previous messages
+        messagesDiv.innerHTML = ''; 
 
         if (password !== password2) {
             messagesDiv.innerHTML = `<div class="alert alert-danger">Passwords do not match.</div>`;
@@ -79,7 +78,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken'), // Include CSRF token
+                    'X-CSRFToken': getCookie('csrftoken'), 
                 },
                 body: JSON.stringify({
                     username: username,
@@ -93,12 +92,9 @@
 
             if (response.ok) {
                 messagesDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-                // Store token for future authenticated requests
                 localStorage.setItem('authToken', data.token);
-                // Redirect to login page or home
-                window.location.href = '{% url "PetStore:login_html" %}?message=registration_success'; // Redirect to login
+                window.location.href = '{% url "PetStore:login_html" %}?message=registration_success'; 
             } else {
-                // Display validation errors from DRF serializer
                 let errorMessage = '';
                 for (const key in data) {
                     if (Array.isArray(data[key])) {

@@ -1,4 +1,42 @@
 {% load static %} 
+<style>
+        #loading-overlay {
+            position: fixed; /* Fixes it to the viewport */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+            display: none; /* Hidden by default */
+            justify-content: center; /* Center horizontally */
+            align-items: center;   /* Center vertically */
+            z-index: 9999; /* Ensure it's on top of everything */
+            transition: opacity 0.3s ease-in-out; /* Smooth fade effect */
+            opacity: 0; /* Start with opacity 0 for fade-in */
+        }
+
+        #loading-spinner {
+            border: 8px solid #f3f3f3; /* Light grey border */
+            border-top: 8px solid #3498db; /* Blue border for animation */
+            border-radius: 50%; /* Makes it a circle */
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite; /* Spin animation */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Example styles for demonstration */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+    </style>  
+<div id="loading-overlay">
+        <div id="loading-spinner"></div>
+    </div>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 <aside
   class="sidenav navbar navbar-vertical navbar-expand-xs border-0 border-radius-xl my-3 fixed-start ms-3 bg-gradient-dark"
@@ -23,11 +61,21 @@
       <span class="ms-1 font-weight-bold text-white">Admin</span>
     </a>
   </div>
+  
+  <hr class="horizontal light mt-0 mb-2" />
+   {% if user.is_authenticated %}
+   <div class="d-flex align-items-center justify-content-center gap-3 me-4">
+      <i class="bi bi-person-workspace text-white m-0"></i>
+        <p class="m-0 fw-bold py-2 text-white">{{ user.username }}</p>
+   </div>
+    {% endif %}
+        
   <hr class="horizontal light mt-0 mb-2" />
   <div
     class="collapse navbar-collapse w-auto max-height-vh-100"
     id="sidenav-collapse-main"
   >
+
     <ul class="navbar-nav">
       <li class="nav-item">
         <a
@@ -43,7 +91,6 @@
         </a>
       </li>
 
-      {# Data Tables - Now a single link to the main table page #}
       <li class="nav-item">
         <a
           class="nav-link text-white {% if segment == 'dynamic_dt' or request.GET.main_item %}active bg-gradient-primary{% endif %}"
@@ -66,7 +113,6 @@
         </a>
       </li>
 
-      {# Dynamic API (brought back) #}
       <li class="nav-item">
         <a
           class="nav-link text-white {% if segment == 'dynamic_api' %}active bg-gradient-primary{% endif %}"
@@ -95,7 +141,6 @@
         </a>
       </li>
 
-      {# User account (brought back) #}
       <li class="nav-item">
         <a
           class="nav-link text-white {% if segment == 'user_management' %}active bg-gradient-primary{% endif %}"
@@ -123,14 +168,31 @@
   </div>
 
   <script>
-
-  function getCookie(name) {
+    
+ function loading() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex'; 
+                overlay.offsetWidth;
+                overlay.style.opacity = '1'; 
+            }
+        }
+        function loaded() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.style.opacity = '0'; 
+                overlay.addEventListener('transitionend', function handler() {
+                    overlay.style.display = 'none';
+                    overlay.removeEventListener('transitionend', handler); 
+                }, { once: true }); 
+            }
+        }
+    function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
@@ -139,31 +201,31 @@
         }
         return cookieValue;
     }
-  const logoutLinks = document.querySelectorAll('a[href$="api/logout/"]'); // Select all logout links
+  const logoutLinks = document.querySelectorAll('a[href$="api/logout/"]'); 
 
     logoutLinks.forEach(link => {
         link.addEventListener('click', async function(e) {
-            e.preventDefault(); // Prevent the default link navigation
+            e.preventDefault(); 
 
             try {
+                loading()
                 const response = await fetch('{% url "APIs:api-logout" %}', {
-                    method: 'POST', // <--- ENSURE THIS IS 'POST'
+                    method: 'POST', 
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'), // Make sure getCookie function is available
-                        'Authorization': `Token ${localStorage.getItem('authToken')}` // Send token
+                        'X-CSRFToken': getCookie('csrftoken'), 
+                        'Authorization': `Token ${localStorage.getItem('authToken')}` 
                     },
-                    // No 'body' needed for logout usually, but you can send an empty JSON object if required by server
                     body: JSON.stringify({})
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    localStorage.removeItem('authToken'); // Clear token
-                    localStorage.removeItem('username'); // Clear username
+                    localStorage.removeItem('authToken'); 
+                    localStorage.removeItem('username'); 
                     alert(data.message);
-                    window.location.href = '{% url "PetStore:home" %}'; // Redirect
+                    window.location.href = '{% url "PetStore:home" %}'; 
                 } else {
                     alert(`Logout failed: ${data.error || 'Server error'}`);
                 }

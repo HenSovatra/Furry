@@ -5,7 +5,6 @@
         {% if product.image %}
             <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded-3">
         {% else %}
-            {# Provide a placeholder image if product.image is empty #}
             <img src="{% static 'images/placeholder.png' %}" alt="No Image Available" class="img-fluid rounded-3">
         {% endif %}
     </div>
@@ -28,14 +27,12 @@
         {% endif %}
         
         <div class="button-area mt-4">
-            {# Added inline style for max-width to make the input group smaller #}
             <div class="input-group product-qty mb-3" style="max-width: 150px; display: flex; align-items: center; gap: 5px;">
                 <span class="input-group-btn">
                     <button type="button" class="quantity-left-minus btn btn-light btn-number" data-type="minus" data-field="quantity-modal-{{ product.id }}">
                         <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
                     </button>
                 </span>
-                {# Unique ID for modal input, and max attribute for stock limit #}
                 <input type="text" id="quantity-modal-{{ product.id }}" name="quantity" class="quantity form-control input-number text-center" value="1" min="1" max="{{ product.stock }}">
                 <span class="input-group-btn">
                     <button type="button" class="quantity-right-plus btn btn-light btn-number" data-type="plus" data-field="quantity-modal-{{ product.id }}">
@@ -49,7 +46,6 @@
                      Add to Cart
                 </a>
             {% else %}
-                {# Display a disabled button if out of stock #}
                 <button type="button" class="btn btn-secondary rounded-1 p-2 fs-7" disabled>Out of Stock</button>
             {% endif %}
         </div>

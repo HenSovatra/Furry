@@ -24,7 +24,6 @@
             </div>
             <div class="modal-body">
                 <div id="cart-dialog-content">
-                    {# Cart items will be loaded here via AJAX #}
                     <p class="text-center text-muted">Loading cart...</p>
                 </div>
             </div>
@@ -33,7 +32,6 @@
                 <div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Continue Shopping</button>
                     <a href="{% url 'PetStore:checkout' %}" class="btn btn-primary" id="cart-dialog-checkout-btn">Proceed to Checkout</a>
-                    {# IMPORTANT: Replace 'your_app_name:checkout' with your actual checkout URL name #}
                 </div>
             </div>
         </div>
@@ -42,7 +40,7 @@
    <div class="container-lg">
      <div class="row py-4 pb-0">
 
-       <div class="col-sm-6 col-md-5 col-lg-3 justify-content-center justify-content-lg-between text-center text-sm-start d-flex gap-3">
+       <div class="col-sm-12 col-md-12 col-lg-3 py-2 py-sm-2 justify-content-center justify-content-lg-between text-center text-sm-start d-flex gap-3">
          <div class="d-flex align-items-center">
            <a href="index.html">
              <img src="{% static 'images/logo.svg' %}" alt="logo" class="img-fluid">
@@ -54,7 +52,7 @@
          </div>
        </div>
 
-       <div class="col-sm-10 col-md-4 col-lg-7 d-none d-md-block">
+       <div class="col-sm-10 col-md-4 col-lg-7 d-sm-none d-none d-md-none d-xl-block d-lg-block">
          <div class="search-bar row justify-content-between bg-light p-2 rounded-4" style="height: 50px;">
            <div class="col-11">
              <form id="search-form" class="text-center" action="index.html" method="post">
@@ -70,9 +68,8 @@
            </div>
          </div>
        </div>
-       <div class="col-sm-12 col-md-3 col-lg-2 d-none d-md-block" style="display:flex !important;align-items: center;gap: 10px;">
+       <div class="col-sm-12 col-md-3 col-lg-2 d-sm-none d-none d-md-none d-xl-flex d-lg-flex" style="display:flex ;align-items: center;gap: 10px;">
         {% if user.is_authenticated %}
-       
         <p class="m-0 fw-bold">{{ user.username }}</p>
         <a href="{% url 'APIs:api-logout' %}" class="fs-6">Logout</a>
         {% else %}
@@ -80,53 +77,35 @@
         {% endif %}
        </div>
 
-       <div class="col-sm-6 col-md-3 col-lg-2 d-flex justify-content-end gap-5 align-items-center mt-4 mt-sm-0 justify-content-center justify-content-sm-end">
-         <ul class="d-flex justify-content-end list-unstyled m-0">
-           <li>
-             <a href="#" class="p-2 mx-1">
-               <svg width="24" height="24">
-                 <use xlink:href="#user"></use>
-               </svg>
-             </a>
-           </li>
-           <li>
-             <a href="#" class="p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart"
-               aria-controls="offcanvasCart">
-               <svg width="24" height="24">
-                 <use xlink:href="#shopping-bag"></use>
-               </svg>
-             </a>
-           </li>
-           <li class="d-md-none">
-             <a href="#" class="p-2 mx-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSearch"
-               aria-controls="offcanvasSearch">
-               <svg width="24" height="24">
-                 <use xlink:href="#search"></use>
-               </svg>
-             </a>
-           </li>
-         </ul>
-         
-       </div>
-
      </div>
       <nav class="p-0 navbar navbar-expand-lg">
        
        <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
          <div class="offcanvas-header">
-           <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Offcanvas</h5>
+           <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Furry</h5>
            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
          </div>
          <div class="offcanvas-body justify-content-center">
 
            <ul class="navbar-nav mb-0">
+              <li class="nav-item border-end-0 border-lg-end dropdown  d-block d-sm-block d-md-block d-lg-noone d-xl-none">
+                <a class="nav-link fw-bold px-4 py-3 d-flex align-items-center gap-3" 
+                  data-bs-toggle="dropdown" aria-expanded="false">
+                    {% if user.is_authenticated %}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
+                      <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
+                      <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>
+                    </svg>
+                    <p class="m-0 fw-bold">{{ user.username }}</p>
+                     {% else %}
+                      <a href="{% url 'PetStore:login_html' %}">Login</a> | <a href="{% url 'PetStore:register_html' %}">Register</a>
+                    {% endif %}
+                </a>
+              </li>
              {% for item in main_menu_items %}
                {% if item.is_active %}
-                 {# Normalize URLs for comparison: remove trailing slashes unless it's the root '/' #}
                  {% with normalized_item_url=item.url|default_if_none:"/"|cut:"/" %}
                  {% with normalized_request_path=request.path|cut:"/" %}
-                 
-                   {# Check if the item has children to determine if it's a dropdown #}
                    {% if item.children.all %}
                      <li class="nav-item border-end-0 border-lg-end dropdown">
                        <a class="nav-link fw-bold px-4 py-3 dropdown-toggle {% if normalized_item_url == normalized_request_path %}active{% endif %}" 
@@ -137,7 +116,6 @@
                        <ul class="dropdown-menu px-3 px-lg-0 pb-2 mt-0 border-0 rounded-0 animate slide shadow" aria-labelledby="{{ item.title|slugify }}">
                          {% for child_item in item.children.all %}
                            {% if child_item.is_active %}
-                             {# Normalize child URLs too for comparison #}
                              {% with normalized_child_url=child_item.url|default_if_none:"/"|cut:"/" %}
                                <li>
                                  <a href="{{ child_item.url }}" 
@@ -151,7 +129,6 @@
                        </ul>
                      </li>
                    {% else %}
-                     {# Regular nav-item without a dropdown #}
                      <li class="nav-item border-end-0 border-lg-end">
                        <a href="{{ item.url }}" class="nav-link fw-bold px-4 py-3 {% if normalized_item_url == normalized_request_path %}active{% endif %}">
                          {{ item.title }}
@@ -170,6 +147,13 @@
                   <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-item-count">0</span>
               </a>
              </li>
+              {% if user.is_authenticated %}
+                <li class="nav-item border-end-0 border-lg-end dropdown d-block d-sm-block d-md-block d-lg-noone d-xl-none">
+                  <a class="nav-link fw-bold px-4 py-3" href="{% url 'APIs:api-logout' %}">
+                    Logout
+                  </a>
+                </li>
+              {% endif %}
            </ul>
           
          </div>
@@ -187,7 +171,6 @@
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
@@ -196,31 +179,30 @@
         }
         return cookieValue;
     }
-  const logoutLinks = document.querySelectorAll('a[href$="api/logout/"]'); // Select all logout links
+  const logoutLinks = document.querySelectorAll('a[href$="api/logout/"]'); 
 
     logoutLinks.forEach(link => {
         link.addEventListener('click', async function(e) {
-            e.preventDefault(); // Prevent the default link navigation
+            e.preventDefault(); 
 
             try {
                 const response = await fetch('{% url "APIs:api-logout" %}', {
-                    method: 'POST', // <--- ENSURE THIS IS 'POST'
+                    method: 'POST', 
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'), // Make sure getCookie function is available
-                        'Authorization': `Token ${localStorage.getItem('authToken')}` // Send token
+                        'X-CSRFToken': getCookie('csrftoken'), 
+                        'Authorization': `Token ${localStorage.getItem('authToken')}` 
                     },
-                    // No 'body' needed for logout usually, but you can send an empty JSON object if required by server
                     body: JSON.stringify({})
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    localStorage.removeItem('authToken'); // Clear token
-                    localStorage.removeItem('username'); // Clear username
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('username'); 
                     alert(data.message);
-                    window.location.href = '{% url "PetStore:home" %}'; // Redirect
+                    window.location.href = '{% url "PetStore:home" %}'; 
                 } else {
                     alert(`Logout failed: ${data.error || 'Server error'}`);
                 }

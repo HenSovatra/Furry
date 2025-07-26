@@ -18,11 +18,10 @@ def track_api_usage(view_func):
 
         try:
             api_entry, created = APIList.objects.get_or_create(endpoint=endpoint_path)
-            api_entry.increment_usage() # This also saves the object
+            api_entry.increment_usage() 
             if created:
                 print(f"New API endpoint '{endpoint_path}' tracked.")
         except Exception as e:
-            # Log the error, but don't prevent the API call from proceeding
             print(f"Error tracking API usage for {endpoint_path}: {e}")
 
         return view_func(request, *args, **kwargs)

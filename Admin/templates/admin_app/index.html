@@ -79,10 +79,9 @@
                 Total Customers
               </p>
               <h5 class="font-weight-bolder">{{ total_customers }}</h5>
-              <p class="mb-0">
-                <span class="text-success text-sm font-weight-bolder">+3%</span>
-                since last week
-              </p>
+             <p class="text-sm text-white mb-0">
+              1
+            </p>
             </div>
           </div>
           <div class="col-4 text-end">
@@ -106,9 +105,8 @@
                 Total Orders
               </p>
               <h5 class="font-weight-bolder">{{ total_orders }}</h5>
-              <p class="mb-0">
-                <span class="text-danger text-sm font-weight-bolder">-2%</span>
-                since last quarter
+                <p class="text-sm text-white mb-0">
+                1
               </p>
             </div>
           </div>
@@ -133,27 +131,25 @@
                   Total Revenue
               </p>
               <h5 class="font-weight-bolder">
-                  ${{ stripe_revenue_this_month|floatformat:2 }} {# Changed from stripe_revenue_today #}
+                  ${{ stripe_revenue_this_month|floatformat:2 }} 
               </h5>
               <p class="mb-0">
-                  {# Conditional display for percentage change based on 'is_revenue_increase' #}
-                  {# Use stripe_revenue_last_month for comparison #}
-                  {% if stripe_revenue_last_month is not none %} {# Ensure last month's data was fetched #}
-                      {% if revenue_percentage_change > 0 %} {# If there's an actual change (not 0%) #}
+                  {% if stripe_revenue_last_month is not none %}
+                      {% if revenue_percentage_change > 0 %} 
                           {% if is_revenue_increase %}
                               <span class="text-success text-sm font-weight-bolder">+{{ revenue_percentage_change|floatformat:2 }}%</span>
                           {% else %}
                               <span class="text-danger text-sm font-weight-bolder">-{{ revenue_percentage_change|floatformat:2 }}%</span>
                           {% endif %}
-                      {% elif stripe_revenue_this_month == 0 and stripe_revenue_last_month > 0 %} {# Special case: This Month 0, Last Month > 0 (100% decrease) #}
+                      {% elif stripe_revenue_this_month == 0 and stripe_revenue_last_month > 0 %} 
                           <span class="text-danger text-sm font-weight-bolder">-100.00%</span>
-                      {% elif stripe_revenue_this_month > 0 and stripe_revenue_last_month == 0 %} {# Special case: This Month > 0, Last Month 0 (infinite increase) #}
+                      {% elif stripe_revenue_this_month > 0 and stripe_revenue_last_month == 0 %} 
                           <span class="text-success text-sm font-weight-bolder">+Infinite%</span>
-                      {% else %} {# Both this month and last month are 0, or revenue_percentage_change is exactly 0 #}
+                      {% else %} 
                           <span class="text-muted text-sm font-weight-bolder">0.00%</span>
                       {% endif %}
                   {% endif %}
-                  than last month {# Changed from than yesterday #}
+                  than last month 
               </p>
           </div>
           </div>
@@ -175,14 +171,11 @@
     <div class="card z-index-2 h-100">
       <div class="card-header pb-0 pt-3 bg-transparent">
         <h6 class="text-capitalize">Product Overview</h6>
-        {# Changed title for clarity #}
         <p class="text-sm mb-0">
           <i class="fa fa-arrow-up text-success"></i>
           <span class="font-weight-bold">{{ product_growth }}% more</span> in
           product growth
         </p>
-
-        {# --- NEW UI FOR CHART PERIOD SELECTION --- #}
         <div
           class="btn-group btn-group-sm mt-3"
           role="group"
@@ -217,7 +210,6 @@
             Yearly
           </button>
         </div>
-        {# --- END NEW UI --- #}
       </div>
       <div class="card-body p-3">
         <div class="chart">
@@ -300,7 +292,6 @@
   </div>
 </div>
 
-<!-- ===== Add Blog Form ===== -->
 <div class="container mt-5">
   <h2>Add New Blog</h2>
   <form id="addBlogForm" enctype="multipart/form-data">
@@ -333,7 +324,6 @@
       <label for="category">Category</label>
       <select class="form-control" id="category" name="category" required>
         <option value="" disabled selected>Select a category</option>
-        <!-- Options will be dynamically loaded by JS -->
       </select>
     </div>
 
@@ -393,10 +383,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const blogMessage = document.getElementById("blogMessage");
   const categorySelect = document.getElementById("category");
 
-  // Fetch categories and populate the dropdown
   async function loadCategories() {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/admin/categories/");
+      const response = await fetch("/api/admin/categories/");
       if (!response.ok) throw new Error("Failed to load categories");
       const categories = await response.json();
 
@@ -444,13 +433,12 @@ try {
     method: "POST",
     headers: {
       "X-CSRFToken": csrfToken,
-      // No Content-Type here!
     },
     body: formData,
   });
 
   const text = await response.text();
-  console.log("Response text:", text); // <-- add this line to see what server returned
+  console.log("Response text:", text); 
 
   if (!response.ok) {
     blogMessage.innerHTML = `<div class="alert alert-danger">Error: ${text}</div>`;
@@ -482,8 +470,6 @@ try {
   }
 });
 
-
-  // Store all aggregated data received from Django
   const allChartData = {
     daily: {{ daily_product_data|safe }},
     weekly: {{ weekly_product_data|safe }},
@@ -491,23 +477,20 @@ try {
     yearly: {{ yearly_product_data|safe }}
   };
 
-  let productChart; // Declare a variable to hold the chart instance
+  let productChart; 
 
-  // Function to update the chart data
   function updateProductChart(period) {
     const dataForPeriod = allChartData[period];
     const labels = dataForPeriod.map(item => item.label);
     const values = dataForPeriod.map(item => item.value);
 
-    // Update chart data and labels
     productChart.data.labels = labels;
     productChart.data.datasets[0].data = values;
-    productChart.data.datasets[0].label = `Total Products (${period.charAt(0).toUpperCase() + period.slice(1)})`; // Update dataset label
+    productChart.data.datasets[0].label = `Total Products (${period.charAt(0).toUpperCase() + period.slice(1)})`; 
 
-    productChart.update(); // Re-render the chart
+    productChart.update(); 
   }
 
-  // --- Chart Initialization ---
   var ctx1 = document.getElementById("chart-line").getContext("2d");
 
   var gradientStroke1 = ctx1.createLinearGradient(0, 230, 0, 50);
@@ -515,7 +498,6 @@ try {
   gradientStroke1.addColorStop(0.2, "rgba(94, 114, 228, 0.0)");
   gradientStroke1.addColorStop(0, "rgba(94, 114, 228, 0)");
 
-  // Initialize the chart with daily data by default
   const initialData = allChartData.daily;
   const initialLabels = initialData.map(item => item.label);
   const initialValues = initialData.map(item => item.value);
@@ -526,7 +508,7 @@ try {
       labels: initialLabels,
       datasets: [
         {
-          label: "Total Products (Daily)", // Initial label
+          label: "Total Products (Daily)", 
           tension: 0.4,
           borderWidth: 0,
           pointRadius: 0,
@@ -596,18 +578,15 @@ try {
     },
   });
 
-  // --- Event Listeners for Period Buttons ---
   const periodButtons = document.querySelectorAll('.chart-period-btn');
 
   periodButtons.forEach(button => {
     button.addEventListener('click', function() {
-      // Remove 'active' class from all buttons
       periodButtons.forEach(btn => btn.classList.remove('active'));
-      // Add 'active' class to the clicked button
       this.classList.add('active');
 
-      const period = this.dataset.period; // Get the period from data-period attribute
-      updateProductChart(period); // Update the chart
+      const period = this.dataset.period; 
+      updateProductChart(period); 
     });
   });
 </script>

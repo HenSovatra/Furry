@@ -9,7 +9,6 @@
                 </div>
                 <div class="card-body p-4">
                     <div id="alert-messages-login" class="mb-3"></div>
-                    {% comment %} Handle messages from a redirect (e.g., after successful registration) {% endcomment %}
                     <script>
                         document.addEventListener('DOMContentLoaded', function() {
                             const params = new URLSearchParams(window.location.search);
@@ -37,13 +36,16 @@
                     <p class="text-center mt-3">
                         Don't have an account? <a href="{% url 'PetStore:register_html' %}">Register here</a>
                     </p>
+                     <p class="text-center mt-3">
+                        <a href="{% url 'PetStore:home' %}">Continue as guest</a>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 <script>
-    function getCookie(name) { /* ... same getCookie function as above ... */
+    function getCookie(name) { 
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
@@ -63,14 +65,14 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
         const messagesDiv = document.getElementById('alert-messages-login');
-        messagesDiv.innerHTML = ''; // Clear previous messages
+        messagesDiv.innerHTML = ''; 
 
         try {
             const response = await fetch('{% url "APIs:api-login" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken'), // Include CSRF token
+                    'X-CSRFToken': getCookie('csrftoken'), 
                 },
                 body: JSON.stringify({
                     username: username,
@@ -81,19 +83,15 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Store token for future authenticated requests
                 localStorage.setItem('authToken', data.token);
                 messagesDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-                // Redirect to home page
                 if (data.redirect_url) {
                     window.location.href = data.redirect_url;
                 } else {
-                    // Fallback in case redirect_url is somehow missing
                     console.warn("No redirect URL provided, redirecting to home.");
                     window.location.href = '/';
                 }
             } else {
-                // Display error message from DRF API
                 messagesDiv.innerHTML = `<div class="alert alert-danger">Login failed: ${data.error || 'Invalid credentials'}</div>`;
             }
         } catch (error) {
@@ -102,7 +100,6 @@
         }
     });
 
-    // Handle logout from frontend (e.g., a button click)
     document.addEventListener('DOMContentLoaded', function() {
         const logoutLink = document.querySelector('a[href="{% url "APIs:api-logout" %}"]');
         if (logoutLink) {
@@ -114,16 +111,16 @@
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCookie('csrftoken'),
-                            'Authorization': `Token ${localStorage.getItem('authToken')}` // Send token for logout
+                            'Authorization': `Token ${localStorage.getItem('authToken')}` 
                         }
                     });
 
                     const data = await response.json();
 
                     if (response.ok) {
-                        localStorage.removeItem('authToken'); // Clear token from storage
-                        alert(data.message); // Or display as a message
-                        window.location.href = '{% url "PetStore:home" %}'; // Redirect
+                        localStorage.removeItem('authToken'); 
+                        alert(data.message); 
+                        window.location.href = '{% url "PetStore:home" %}'; 
                     } else {
                         alert(`Logout failed: ${data.error || 'Server error'}`);
                     }

@@ -5,10 +5,10 @@
         <thead>
             <tr>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                    AUTHOR
+                    ITEM
                 </th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                    FUNCTION
+                    CATEGORY
                 </th>
                 <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                     STATUS
@@ -17,15 +17,14 @@
                     STOCK
                 </th>
                 <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                    EMPLOYED
+                    CREATE DATE
                 </th>
-                <th class="text-secondary opacity-7"></th> {# For actions #}
+                <th class="text-secondary opacity-7"></th> 
             </tr>
         </thead>
         <tbody>
             {% for item in items.object_list %}
             <tr class="table-row">
-                {# Author Column (Product Name and Image) #}
                 <td>
                     <div class="d-flex px-2 py-1 team-info">
                         <div>
@@ -44,12 +43,10 @@
                         </div>
                     </div>
                 </td>
-                {# Function Column (Product Description / Category) #}
                 <td>
                     <p class="text-xs font-weight-bold mb-0">{{ item.category.name|default:"N/A" }}</p>
                     <p class="text-xs text-secondary mb-0">{{ item.description|truncatechars:30 }}</p>
                 </td>
-                {# Status Column (Product is_active) #}
                 <td class="align-middle text-center text-sm">
                     {% if item.is_active %}
                         <span class="badge badge-sm bg-gradient-success">Active</span>
@@ -57,21 +54,17 @@
                         <span class="badge badge-sm bg-gradient-danger">Inactive</span>
                     {% endif %}
                 </td>
-                {# Stock Column (Product Stock) #}
                 <td class="align-middle text-center">
                     <span class="text-secondary text-xs font-weight-bold">{{ item.stock }}</span>
                 </td>
-                {# Employed Column (Product created_at) #}
                 <td class="align-middle text-center">
                     <span class="text-secondary text-xs font-weight-bold">{{ item.created_at }}</span>
                 </td>
-                {# Actions Column - MODIFIED HREFS AND ADDED DATA ATTRIBUTES #}
                 <td class="align-middle">
                     <div class="d-flex align-items-center gap-2">
-                        {# Ensure 'model_name' is passed to the template context. E.g., from views.py: context['model_name'] = 'product' #}
                         <a href="#" class="text-secondary font-weight-bold text-xs edit-btn"
                                 data-item-id="{{ item.id }}"
-                                data-model-name="{{ model_info.model_name }}"  {# Corrected #}
+                                data-model-name="{{ model_info.model_name }}"
                                 data-update-url="{% url 'Admin:update' model_name item.id %}"
                                 data-bs-toggle="modal"
                                 data-bs-target="#editSales-{{item.id}}"
@@ -80,7 +73,7 @@
                             </a>
                             <a href="#" class="text-danger font-weight-bold text-xs delete-btn"
                                 data-item-id=\"{{ item.id }}\"
-                                data-model-name="{{ model_info.model_name }}" {# Corrected #}
+                                data-model-name="{{ model_info.model_name }}"
                                 data-delete-url="{% url 'Admin:delete' model_name item.id %}"
                                 data-bs-toggle="tooltip" data-bs-original-title="Delete Product">
                                 <i class="fas fa-trash-alt"></i> Delete

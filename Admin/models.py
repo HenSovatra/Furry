@@ -1,14 +1,8 @@
 # Furry/Admin/models.py
 
 from django.db import models
-from django.contrib.auth.models import AbstractUser, Group, Permission # For User Management
-from django.conf import settings # To get AUTH_USER_MODEL if custom user is elsewhere
+from django.conf import settings 
 from django.utils import timezone
-# User Account Management (if not using Django's default Admin and want custom fields)
-# If you are only managing default User model, you don't need to define it here.
-# If you have a custom user model in your main project, ensure it's imported or referenced.
-# For simplicity, we'll assume you're extending or using Django's default User for now.
-# If you need custom fields, you'd extend AbstractUser in your main app or here.
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
@@ -22,7 +16,6 @@ class Product(models.Model):
         return self.name
 
 class Customer(models.Model):
-    # If linking to Django's User model
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -55,7 +48,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.IntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2) # Price at time of order
+    price = models.DecimalField(max_digits=10, decimal_places=2) 
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name}"
@@ -86,7 +79,7 @@ class APIList(models.Model):
     class Meta:
         verbose_name = "API Endpoint"
         verbose_name_plural = "API Endpoints"
-        ordering = ['endpoint'] # Order by endpoint alphabetically by default
+        ordering = ['endpoint'] 
 
     def __str__(self):
         return self.endpoint
@@ -96,3 +89,8 @@ class APIList(models.Model):
         self.access_count += 1
         self.last_accessed = timezone.now()
         self.save()
+
+class AccessToken(models.Model):
+    token = models.CharField(max_length=255, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)

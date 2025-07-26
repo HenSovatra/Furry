@@ -10,9 +10,8 @@ from django.db import transaction
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
-from rest_framework import viewsets, filters # Import filters
+from rest_framework import viewsets, filters 
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework import viewsets, permissions
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authtoken.models import Token
 import stripe
@@ -31,47 +30,42 @@ from django.db.models import Prefetch
 from django.db.models import Sum, F
 from django.http import JsonResponse
 from .decorators import track_api_usage
+from rest_framework.permissions import AllowAny
+from .authentication import QueryParamAccessTokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.decorators import api_view, authentication_classes
+import json
+from rest_framework import permissions
 
-logger = logging.getLogger(__name__) # Initialize logger for this module
+logger = logging.getLogger(__name__) 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-# --- Centralized Cart Helper Function ---
 def get_or_create_cart(request):
     """
     Retrieves or creates a cart based on user authentication status or session key.
     """
     if request.user.is_authenticated:
-        # For authenticated users, find or create a cart linked to their user account.
-        # Ensure session_key is None for authenticated users' carts to avoid confusion.
         cart, created = Cart.objects.get_or_create(user=request.user, defaults={'session_key': None})
-        # TODO: Implement cart merging logic here if an anonymous cart exists for the session
-        # and the user just logged in. This is a more advanced feature.
     else:
-        # For anonymous users, use the session key to identify/create the cart.
         session_key = request.session.session_key
         if not session_key:
-            # If session is new, save it to generate a session_key
             request.session.save()
             session_key = request.session.session_key
-        # Get or create a cart linked to the session key and explicitly no user.
         cart, created = Cart.objects.get_or_create(session_key=session_key, user=None)
-        # Ensure the session_key is correctly set on the cart in case it was just created
-        if created or not cart.session_key: # Ensure it's set if new or was somehow missing
+        if created or not cart.session_key: 
             cart.session_key = session_key
             cart.save()
     return cart
 
-# --- Product Views ---
 
-# --- Teammate's Existing API Views (UPDATED to use PetStoreProduct) ---
 @api_view(['GET'])
+@authentication_classes([QueryParamAccessTokenAuthentication]) 
 @track_api_usage
 def product_list(request):
     products = Product.objects.filter(is_active=True).annotate(
-        # Calculate total_sold by summing quantities from related OrderItems
         total_sold=Sum('orderitem__quantity')
-    ).order_by(F('total_sold').desc(nulls_last=True)) # Order by total_sold descending, nulls (no sales) last
+    ).order_by(F('total_sold').desc(nulls_last=True)) 
 
     serializer = ProductSerializer(products, many=True, context={'request': request})
     return Response(serializer.data)
@@ -86,15 +80,15 @@ def products_by_createdate(request):
 
 @api_view(['GET'])
 def product_detail(request, pk):
-    product = get_object_or_404(Product, pk=pk, is_active=True) # Changed to PetStoreProduct
+    product = get_object_or_404(Product, pk=pk, is_active=True) 
     serializer = ProductSerializer(product)
     return Response(serializer.data)
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) # Allow anyone to add to cart
-@csrf_exempt # Use @csrf_protect if you rely on Django's session-based CSRF for this API.
+@permission_classes([AllowAny]) 
+@csrf_exempt 
 def add_to_cart_api(request):
-    cart = get_or_create_cart(request) # <--- Use the helper here
+    cart = get_or_create_cart(request) 
     product_id = request.data.get('product_id')
     quantity = int(request.data.get('quantity', 1))
 
@@ -108,26 +102,18 @@ def add_to_cart_api(request):
         cart_item.quantity += quantity
     else:
         cart_item.quantity = quantity
-    # price_at_addition is set in CartItem's save method, no need to set here explicitly unless you want to override
     cart_item.save()
-
-    # Update cart totals after item change (CartItem's save/delete triggers cart.update_totals)
-    # cart.update_totals() # This call is handled by CartItem's save/delete methods
-    request.session['cart_total_items'] = cart.total_items # Update session for frontend display
+    request.session['cart_total_items'] = cart.total_items 
 
     return Response({'success': True, 'message': 'Added to cart.', 'cart_total_items': cart.total_items})
 
 @api_view(['GET'])
-@permission_classes([AllowAny]) # Allow anyone to view cart details
+@permission_classes([AllowAny]) 
 def cart_details(request):
-    cart = get_or_create_cart(request) # <--- Use the helper here
-
-    # CORRECTED LINE: Use 'items.all()' because of related_name='items' in CartItem model
+    cart = get_or_create_cart(request)
     items = cart.items.all()
     serializer = CartItemSerializer(items, many=True)
-
-    # Ensure cart.total_price and cart.total_items are correctly calculated and updated
-    cart.update_totals() # Call this before returning if totals are not always fresh
+    cart.update_totals()
 
     return Response({
         'cart_items': serializer.data,
@@ -137,10 +123,9 @@ def cart_details(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) # Order detail should typically require authentication
+@permission_classes([IsAuthenticated]) 
 def order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id)
-    # Ensure only the owner or staff can view the order
     if not request.user.is_staff and order.user != request.user:
         return Response({'error': 'You do not have permission to view this order.'}, status=status.HTTP_403_FORBIDDEN)
     serializer = OrderSerializer(order)
@@ -148,8 +133,8 @@ def order_detail(request, order_id):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) # Allow anyone to update cart quantity
-@csrf_exempt # Use @csrf_protect if you rely on Django's session-based CSRF for this API.
+@permission_classes([AllowAny]) 
+@csrf_exempt 
 def update_cart_item_quantity_api(request):
     try:
         product_id = request.data.get('product_id')
@@ -158,10 +143,9 @@ def update_cart_item_quantity_api(request):
         if not product_id or not isinstance(new_quantity, int) or new_quantity < 0:
             return Response({'success': False, 'error': 'Invalid product ID or quantity.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        cart = get_or_create_cart(request) # <--- Use the helper here
+        cart = get_or_create_cart(request) 
 
         try:
-            # CORRECTED LINE: Use 'items' to access CartItems
             cart_item = cart.items.get(product__id=product_id)
         except CartItem.DoesNotExist:
             return Response({'success': False, 'error': 'Item not found in cart.'}, status=status.HTTP_404_NOT_FOUND)
@@ -179,9 +163,7 @@ def update_cart_item_quantity_api(request):
             cart_item.save()
             message = 'Cart quantity updated.'
 
-        # cart.update_totals() is implicitly called by CartItem's save/delete methods
-        request.session['cart_total_items'] = cart.total_items # Update session for frontend display
-
+        request.session['cart_total_items'] = cart.total_items 
         return Response({'success': True, 'message': message, 'cart_total_items': cart.total_items}, status=status.HTTP_200_OK)
 
     except Exception as e:
@@ -189,8 +171,8 @@ def update_cart_item_quantity_api(request):
         return Response({'success': False, 'error': f'An unexpected error occurred: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) # Allow anyone to remove from cart
-@csrf_exempt # Use @csrf_protect if you rely on Django's session-based CSRF for this API.
+@permission_classes([AllowAny]) 
+@csrf_exempt 
 def remove_from_cart_api(request):
     try:
         product_id = request.data.get('product_id')
@@ -198,20 +180,17 @@ def remove_from_cart_api(request):
         if not product_id:
             return Response({'success': False, 'error': 'Product ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        cart = get_or_create_cart(request) # <--- Use the helper here
+        cart = get_or_create_cart(request) 
 
         try:
-            # CORRECTED LINE: Use 'items' to access CartItems
             cart_item = cart.items.get(product__id=product_id)
             cart_item.delete()
             message = 'Item successfully removed from cart.'
         except CartItem.DoesNotExist:
             message = 'Item was not in cart (already removed or never existed).'
-            # Even if item wasn't there, it's a success from the user's perspective (they wanted it gone)
             return Response({'success': True, 'message': message, 'cart_total_items': cart.total_items}, status=status.HTTP_200_OK)
 
-        # cart.update_totals() is implicitly called by CartItem's save/delete methods
-        request.session['cart_total_items'] = cart.total_items # Update session for frontend display
+        request.session['cart_total_items'] = cart.total_items 
 
         return Response({'success': True, 'message': message, 'cart_total_items': cart.total_items}, status=status.HTTP_200_OK)
 
@@ -220,8 +199,8 @@ def remove_from_cart_api(request):
         return Response({'success': False, 'error': f'An unexpected error occurred: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) # Allow both authenticated and guest users to place orders
-@csrf_protect # Crucial for security, especially when handling financial transactions
+@permission_classes([AllowAny]) 
+@csrf_protect 
 def place_order_api(request):
     cart = get_or_create_cart(request)
 
@@ -230,65 +209,51 @@ def place_order_api(request):
                         status=status.HTTP_400_BAD_REQUEST)
 
     data = request.data
-    payment_method_id = data.get('payment_method_id') # For the first call to create PI
-    payment_intent_id = data.get('payment_intent_id') # For the second call to finalize PI
+    payment_method_id = data.get('payment_method_id') 
+    payment_intent_id = data.get('payment_intent_id') 
 
-    # For guest users, the email is mandatory as it's their identifier for the order
     email = data.get('email')
-    if not request.user.is_authenticated and not email: # Only require email for guests
+    if not request.user.is_authenticated and not email: 
         return Response({'error': 'Email is required for guest checkout.'}, status=status.HTTP_400_BAD_REQUEST)
     elif request.user.is_authenticated:
-        email = request.user.email # Use logged-in user's email
-
-    # Validate required checkout fields (basic check)
+        email = request.user.email 
     required_fields = ['first_name', 'last_name', 'email', 'address_line_1', 'city', 'state', 'zip_code', 'country']
     for field in required_fields:
         if not data.get(field):
             return Response({'error': f'{field.replace("_", " ").title()} is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # --- SECURITY CRITICAL: Calculate total amount securely on the backend ---
     try:
         final_total_amount = Decimal('0.00')
-        # Ensure you are fetching product price from the Product model, not just item.total_price from cart item,
-        # unless item.total_price is dynamically calculated on item.save() based on current product prices.
-        # It's safer to recalculate from Product model here.
         for item in cart.items.all():
-            product = item.product # Get the actual product object
+            product = item.product 
             if product.discounted_price is not None:
                 product_price = product.discounted_price
             else:
                 product_price = product.original_price
             if not isinstance(product_price, Decimal):
-                product_price = Decimal(str(product_price)) # Ensure Decimal for calculations
+                product_price = Decimal(str(product_price)) 
             final_total_amount += product_price * item.quantity
 
-        # Add shipping costs, taxes, etc., if applicable
-        shipping_cost = Decimal('5.00') # Example static shipping cost
+        shipping_cost = Decimal('5.00') 
         final_total_amount += shipping_cost
 
-        total_amount_cents = int(final_total_amount * 100) # Convert to smallest currency unit (cents)
+        total_amount_cents = int(final_total_amount * 100) 
 
         if total_amount_cents <= 0:
             return Response({'error': 'Cart total must be greater than zero after all calculations.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    except Product.DoesNotExist: # Or whatever exception your product retrieval might throw
+    except Product.DoesNotExist:
         return Response({'error': 'One or more products in your cart could not be found or have an invalid price.'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         logger.exception("Error calculating total amount in place_order_api:")
         return Response({'error': f'Failed to calculate order total: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    # --- End of secure total calculation ---
-
 
     try:
-        with transaction.atomic(): # Ensures that if any part fails, everything is rolled back
-            order = None # Initialize order to None
-
-            # --- Payment Intent Confirmation Flow (Second call from frontend) ---
+        with transaction.atomic(): 
+            order = None 
             if payment_intent_id:
                 try:
                     payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-
-                    # Check if an order already exists for this payment_intent_id
                     existing_order = Order.objects.filter(stripe_payment_intent_id=payment_intent_id).first()
                     if existing_order:
                         logger.info(f"Duplicate call for PI {payment_intent_id}. Order {existing_order.id} already exists.")
@@ -299,9 +264,6 @@ def place_order_api(request):
                             'message': 'Order already processed successfully!',
                             'redirect_url': my_return_url
                         }, status=status.HTTP_200_OK)
-
-                    # Crucial check: Ensure the retrieved PaymentIntent matches the calculated amount
-                    # This protects against a user manipulating the PI ID to complete a cheaper payment.
                     if payment_intent.amount != total_amount_cents:
                         logger.warning(f"Amount mismatch for PI {payment_intent_id}. Expected {total_amount_cents}, got {payment_intent.amount}.")
                         return Response({'error': 'Payment amount mismatch. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -309,14 +271,14 @@ def place_order_api(request):
 
                     if payment_intent.status == 'succeeded':
                         order_data = {
-                            'total_amount': final_total_amount, # Use the Decimal amount
-                            'status': 'Processing', # Initial status for new order, can be 'Pending'
+                            'total_amount': final_total_amount, 
+                            'status': 'Processing', 
                             'payment_status': 'Paid',
                             'first_name': data.get('first_name'),
                             'last_name': data.get('last_name'),
                             'shipping_cost': shipping_cost,
                             'email': email,
-                            'phone': data.get('phone', ''), # Provide default empty string for optional fields
+                            'phone': data.get('phone', ''), 
                             'address_line_1': data.get('address_line_1'),
                             'address_line_2': data.get('address_line_2', ''),
                             'city': data.get('city'),
@@ -333,8 +295,8 @@ def place_order_api(request):
                             'billing_state': data.get('billing_state', data.get('state')),
                             'billing_zip_code': data.get('billing_zip_code', data.get('zip_code')),
                             'billing_country': data.get('billing_country', data.get('country')),
-                            'stripe_payment_intent_id': payment_intent.id, # Save the PI ID
-                            'payment_method': data.get('paymentMethod'), # This should be 'card', 'paypal', etc. from client
+                            'stripe_payment_intent_id': payment_intent.id, 
+                            'payment_method': data.get('paymentMethod'), 
                         }
                         if request.user.is_authenticated:
                             order_data['user'] = request.user
@@ -342,53 +304,41 @@ def place_order_api(request):
                             if request.session.session_key:
                                 order_data['session_key'] = request.session.session_key
                             else:
-                                request.session.save() # Ensure session is saved to get a session_key
+                                request.session.save() 
                                 order_data['session_key'] = request.session.session_key
 
                         order = Order.objects.create(**order_data)
 
-                        # Create OrderItems and deduct stock
                         for item in cart.items.all():
-                            product = item.product # Get the associated product
+                            product = item.product 
                             
-                            # Determine the price to store in OrderItem
                             price_to_store = product.discounted_price if product.discounted_price is not None else product.original_price
 
-                            # Create OrderItem
                             OrderItem.objects.create(
                                 order=order,
                                 product=product,
                                 quantity=item.quantity,
-                                price=price_to_store, # Use product's current price at order time for OrderItem
-                                # Assuming OrderItem also has a total_price field like CartItem
+                                price=price_to_store, 
                                 total_price=item.quantity * price_to_store
                             )
 
-                            # --- STOCK DEDUCTION LOGIC ---
                             if product.stock >= item.quantity:
                                 product.stock -= item.quantity
                                 product.save()
                                 logger.info(f"Deducted {item.quantity} from product {product.name}. New stock: {product.stock}")
                             else:
-                                # This scenario should ideally be caught by the cart validation earlier,
-                                # but it's a good fail-safe to log and potentially raise an error
-                                # if stock wasn't sufficient at the time of order processing.
                                 logger.error(f"Insufficient stock for product {product.name} (ID: {product.id}) during order {order.id} creation. Expected {item.quantity}, but only {product.stock} available.")
-                                # You might want to raise an exception here to rollback the transaction
-                                # raise ValueError(f"Insufficient stock for {product.name}.")
 
 
-                        cart.items.all().delete() # Clear the cart items
-                        # Optionally, delete the cart itself if it's an anonymous cart and empty
+
+                        cart.items.all().delete() 
                         if not cart.items.exists() and not request.user.is_authenticated:
                             cart.delete()
 
-                        # Send order confirmation email
                         subject = 'Your PetStore Order Confirmation'
                         recipient_email = order.email
                         html_message = render_to_string('email/order_confirmation_email.html', {'order': order, 'user': order.user if order.user else None})
                         plain_message = f'Thank you for your order, {order.first_name}! Your order ID is {order.id}.'
-                        # Use from_email setting for the sender
                         send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [recipient_email], html_message=html_message)
 
                         my_return_url = f'{settings.BASE_URL}/order-confirmation/{order.id}'
@@ -401,7 +351,6 @@ def place_order_api(request):
                             'redirect_url': my_return_url
                         }, status=status.HTTP_200_OK)
                     else:
-                        # Payment intent status is not 'succeeded'
                         return Response({
                             'error': f'Payment not successful. Status: {payment_intent.status}. Please try again or use another payment method.',
                             'payment_intent_status': payment_intent.status
@@ -415,26 +364,21 @@ def place_order_api(request):
                     return Response({'error': f'An unexpected error occurred during order finalization: {str(e)}'},
                                      status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            # --- Payment Intent Creation Flow (First call from frontend) ---
             elif payment_method_id:
                 try:
-                    # Removed 'confirm=True' here as per Stripe best practices for client-side confirmation.
-                    # 'confirmation_method="automatic"' means Stripe will handle 3DS flows and redirect if needed.
-                    
                     intent = stripe.PaymentIntent.create(
                         amount=total_amount_cents,
                         currency='usd',
                         payment_method=payment_method_id,
-                        confirm=True, # Confirm the payment intent immediately
-                        confirmation_method='automatic', # Corrected: Use automatic confirmation
-                        return_url=f'{settings.BASE_URL}/order-confirmation/', # Crucial for 3DS! e.g., 'http://localhost:8000/checkout-success/'
+                        confirm=True, 
+                        confirmation_method='automatic', 
+                        return_url=f'{settings.BASE_URL}/order-confirmation/', 
                         metadata={
-                            'cart_id': str(cart.id), # Metadata values must be strings
+                            'cart_id': str(cart.id), 
                             'customer_email': email,
                             'is_guest_checkout': 'true' if not request.user.is_authenticated else 'false',
                             'user_id': str(request.user.id) if request.user.is_authenticated else 'guest'
                         },
-                        # It's good practice to send shipping details to Stripe too
                         shipping={
                             'name': f"{data.get('first_name')} {data.get('last_name')}",
                             'address': {
@@ -448,11 +392,10 @@ def place_order_api(request):
                         },
                         description=f"Order for {email} from PetStore",
                     )
-                    # Return client_secret to frontend for client-side confirmation
                     return Response({
-                        'success': True, # Indicate that creation was successful and client needs to confirm
+                        'success': True, 
                         'client_secret': intent.client_secret,
-                        'payment_intent_id': intent.id, # Also send the PI ID back for the second call
+                        'payment_intent_id': intent.id, 
                         'message': 'Payment Intent created successfully, awaiting client confirmation.'
                     }, status=status.HTTP_200_OK)
 
@@ -469,12 +412,11 @@ def place_order_api(request):
             else:
                 return Response({'error': 'Payment method or intent ID missing. Cannot process order.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    except Exception as e: # Catch any other unexpected errors during the entire process
+    except Exception as e: 
         logger.exception("Unhandled error in place_order_api:")
         return Response({'error': f'An unexpected error occurred: {str(e)}'},
                                      status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# --- Authentication Views ---
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @csrf_protect
@@ -495,32 +437,21 @@ def register_api(request):
 @permission_classes([AllowAny])
 @csrf_protect
 def login_api(request):
-    print("DEBUG: Login API called with data:", request.data)  # Debugging line to check incoming data
+    print("DEBUG: Login API called with data:", request.data)  
     username = request.data.get('username')
     password = request.data.get('password')
 
     user = authenticate(request, username=username, password=password)
     if user is not None:
-        # Log the user in for session-based authentication (if your site uses it, e.g., for Django Admin)
         login(request, user)
-
-        # Get or create the DRF authentication token
         token, created = Token.objects.get_or_create(user=user)
-
-        # --- Redirection Logic based on is_staff ---
         redirect_url = ''
         message = ''
         if user.is_staff:
-            # If the user is staff, redirect them to a dashboard URL
-            # Example: Assuming '/dashboard/' is your staff dashboard URL
-            # If using named URLs: redirect_url = reverse('dashboard')
-            redirect_url = '/my-admin/' # Replace with your actual dashboard URL
+            redirect_url = '/my-admin/' 
             message = 'Login successful. Welcome to the dashboard!'
         else:
-            # If the user is not staff, redirect them to the home page
-            # Example: Assuming '/' is your home page URL
-            # If using named URLs: redirect_url = reverse('home')
-            redirect_url = '/' # Replace with your actual home page URL
+            redirect_url = '/' 
             message = 'Login successful. Welcome back!'
 
         return Response({
@@ -528,11 +459,10 @@ def login_api(request):
             'message': message,
             'username': user.username,
             'token': token.key,
-            'is_staff': user.is_staff, # Include this flag for clarity on the frontend
-            'redirect_url': redirect_url, # The URL for the frontend to navigate to
+            'is_staff': user.is_staff, 
+            'redirect_url': redirect_url, 
         }, status=status.HTTP_200_OK)
     else:
-        # Authentication failed
         return Response({'success': False, 'error': 'Invalid username or password.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -559,13 +489,12 @@ def order_history_api(request):
     serializer = OrderHistorySerializer(orders, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-# --- New Admin-Specific API ViewSets ---
 class ProductAdminViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductAdminSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter] # Add filter backends
-    filterset_fields = ['category'] # Enable filtering by category ID
-    search_fields = ['name', 'description'] # Enable searching by name and description
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter] 
+    filterset_fields = ['category'] 
+    search_fields = ['name', 'description'] 
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
@@ -574,9 +503,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class OrderAdminViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderAdminSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter] # Add filter backends
-    filterset_fields = ['status'] # Enable filtering by the 'status' field
-    search_fields = ['id', 'billing_first_name', 'billing_email'] # Optional: Add search functionality
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter] 
+    filterset_fields = ['status'] 
+    search_fields = ['id', 'billing_first_name', 'billing_email'] 
 
 class BillingViewSet(viewsets.ModelViewSet):
     queryset = Billing.objects.all()
@@ -588,7 +517,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
-    # Include prefetch_related for efficiency when fetching order lists or details
     queryset = Order.objects.all().prefetch_related('order_items')
 
 
@@ -596,13 +524,12 @@ class RegisteredCustomerAPIView(generics.ListCreateAPIView):
     """
     API View to list all registered customers (GET) and register new ones (POST).
     """
-    queryset = User.objects.all() # This queryset is used for listing (GET)
+    queryset = User.objects.filter(is_staff=False) 
 
-    # Override get_serializer_class to use different serializers for GET and POST
     def get_serializer_class(self):
         if self.request.method == 'POST':
-            return RegisterSerializer # Use RegisterSerializer for creating (POST)
-        return RegisteredCustomerSerializer # Use RegisteredCustomerSerializer for listing (GET)
+            return RegisterSerializer 
+        return RegisteredCustomerSerializer 
 
     permission_classes = [AllowAny]
 
@@ -621,7 +548,7 @@ def products_by_category_api(request, category_id):
                 products = products | Product.objects.filter(category=subcat, is_active=True)
 
         product_data = []
-        for product in products.distinct(): # Use distinct() if you combined querysets
+        for product in products.distinct(): 
             price = 0
             image_url = request.build_absolute_uri(product.image.url) if product.image else ''
             if product.discounted_price is not None:
@@ -632,8 +559,8 @@ def products_by_category_api(request, category_id):
                 'id': product.id,
                 'name': product.name,
                 'description': product.description,
-                'price': float(price), # Convert Decimal to float for JSON
-                'image': image_url, # Get full URL
+                'price': float(price), 
+                'image': image_url, 
             })
 
         return Response(product_data)
@@ -645,65 +572,90 @@ def products_by_category_api(request, category_id):
 
 class FeedbackAPIView(View):
     def post(self, request, *args, **kwargs):
-        # Django automatically handles multipart/form-data for file uploads.
-        # request.POST will contain text fields, request.FILES will contain files.
 
         form = FeedbackForm(request.POST)
-        # Initialize the formset with POST data and FILES data
-        # 'images' is the prefix for the formset, based on related_name in FeedbackImage model
         formset = FeedbackImageFormSet(request.POST, request.FILES, prefix='images')
 
         if form.is_valid() and formset.is_valid():
             feedback = form.save(commit=False)
             if request.user.is_authenticated:
-                feedback.user = request.user # Link feedback to the logged-in user
-            feedback.save() # Save the main feedback object first
+                feedback.user = request.user 
+            feedback.save() 
 
-            # Save the images, linking them to the newly created feedback object
             for form_in_formset in formset:
-                if form_in_formset.cleaned_data.get('image'): # Check if an image file was actually provided
+                if form_in_formset.cleaned_data.get('image'): 
                     image_instance = form_in_formset.save(commit=False)
-                    image_instance.feedback = feedback # Link image to the saved feedback
+                    image_instance.feedback = feedback 
                     image_instance.save()
 
             return JsonResponse({'message': 'Feedback submitted successfully!', 'status': 'success'}, status=200)
         else:
-            # If validation fails, compile error messages from both form and formset
             errors = {}
             if form.errors:
-                errors.update(form.errors.as_json()) # Get general form errors
+                errors.update(form.errors.as_json()) 
             if formset.errors:
                 formset_errors_list = []
                 for i, fs_form in enumerate(formset):
                     if fs_form.errors:
-                        # Append errors for each image form in the formset
                         formset_errors_list.append(f"Image {i+1}: {fs_form.errors.as_json()}")
-                errors['images'] = formset_errors_list # Assign all image-related errors under 'images' key
+                errors['images'] = formset_errors_list 
 
             return JsonResponse({'message': 'Validation failed', 'status': 'error', 'errors': errors}, status=400)
 
-# --- 3. API View to Get All Feedback (for Frontend Display) ---
 @api_view(['GET'])
 def get_feedback_api(request):
     """
     API endpoint to retrieve all submitted feedback for display.
     Includes associated images and user/email information.
     """
-    # Fetch all Feedback objects, order by newest first
-    # Use Prefetch to get all related images efficiently in a single query
     feedback_queryset = Feedback.objects.all().order_by('-submitted_at').prefetch_related(
         Prefetch('images', queryset=FeedbackImage.objects.all())
     )
-
-    # Serialize the queryset using the FeedbackSerializer
     serializer = FeedbackSerializer(feedback_queryset, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all()  # Add this line!
+class PostViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Post.objects.filter(is_published=True).order_by('-published_date')
     serializer_class = PostSerializer
-    image = serializers.ImageField(required=False)  # Optional image field
+    lookup_field = 'pk'
+
+    @action(detail=False, methods=['get'])
+    def recent(self, request):
+        """
+        Returns ALL published blog posts, ordered by recent date.
+        This action will no longer limit to 3 posts.
+        """
+        all_recent_posts = self.get_queryset()
+        serializer = self.get_serializer(all_recent_posts, many=True)
+        return Response(serializer.data)
+    
+
+
+def update_order_status(request, order_id):
+    try:
+        order = get_object_or_404(Order, id=order_id)
+        data = json.loads(request.body)
+        new_status = data.get('status')
+
+        if new_status and new_status in [choice[0] for choice in order.STATUS_CHOICES]:
+            order.status = new_status
+            order.save()
+            return JsonResponse({'message': 'Order status updated successfully', 'new_status': new_status})
+        else:
+            return JsonResponse({'error': 'Invalid status provided'}, status=400)
+    except Order.DoesNotExist:
+        return JsonResponse({'error': 'Order not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+
+class PostViewSet(viewsets.ModelViewSet):
+    queryset = Post.objects.all()  
+    serializer_class = PostSerializer
+    image = serializers.ImageField(required=False) 
     
     permission_classes = [permissions.AllowAny]
 

@@ -95,9 +95,7 @@
         const feedbackLoadError = $('#feedback-load-error');
         const feedbackCarousel = $('#feedbackCarousel');
 
-        let filesToUpload = []; // Array to hold files selected for upload
-
-        // --- Utility Functions for Alerts and Form Reset ---
+        let filesToUpload = []; 
         function showAlert(message, type = 'danger') {
             alertMessages.html(`<div class="alert alert-${type} alert-dismissible fade show" role="alert">
                 ${message}
@@ -106,41 +104,33 @@
         }
 
         function resetForm() {
-            feedbackForm[0].reset(); // Resets form fields
-            imagePreviewContainer.empty(); // Clears image previews
-            filesToUpload = []; // Resets the array of files selected for upload
-            alertMessages.empty(); // Clears any submission alerts
-            imageUploadErrorsDiv.empty(); // Clears image upload errors
-            $('.form-control').removeClass('is-invalid'); // Removes invalid styling
-            $('.invalid-feedback').text(''); // Clears error messages below fields
+            feedbackForm[0].reset(); 
+            imagePreviewContainer.empty(); 
+            filesToUpload = []; 
+            alertMessages.empty(); 
+            imageUploadErrorsDiv.empty(); 
+            $('.form-control').removeClass('is-invalid'); 
+            $('.invalid-feedback').text(''); 
         }
 
         function displayFormErrors(errors) {
-            // Clear previous errors first
             $('.form-control').removeClass('is-invalid');
             $('.invalid-feedback').text('');
-
-            // Iterate over the error object received from Django API
             for (const fieldName in errors) {
                 if (fieldName === 'images') {
-                    // Specific handling for formset errors (e.g., from image validation)
                     if (Array.isArray(errors[fieldName])) {
                         errors[fieldName].forEach(imgErrorMsg => {
-                            // Append each image error message
                             imageUploadErrorsDiv.append(`<p>${imgErrorMsg}</p>`);
                         });
                     }
-                    imageUploadInput.addClass('is-invalid'); // Highlight the image input as invalid
+                    imageUploadInput.addClass('is-invalid'); 
                 } else {
-                    // Handle standard form field errors (subject, message, email)
                     try {
-                        // Attempt to parse JSON errors (Django's form.errors.as_json() returns JSON string)
                         const fieldErrors = JSON.parse(errors[fieldName]);
-                        const errorList = fieldErrors.map(err => err.message).join(' '); // Join multiple errors
-                        $(`#id_${fieldName}`).addClass('is-invalid'); // Add invalid class to the input field
-                        $(`#${fieldName}-errors`).text(errorList); // Display error message in the dedicated div
+                        const errorList = fieldErrors.map(err => err.message).join(' ');
+                        $(`#id_${fieldName}`).addClass('is-invalid'); 
+                        $(`#${fieldName}-errors`).text(errorList); 
                     } catch (e) {
-                        // Fallback if error is not JSON (e.g., raw string)
                         $(`#id_${fieldName}`).addClass('is-invalid');
                         $(`#${fieldName}-errors`).text(errors[fieldName]);
                     }
@@ -148,90 +138,77 @@
             }
         }
 
-        // --- Image Upload and Preview Logic ---
         imageUploadInput.on('change', function(e) {
-            imagePreviewContainer.empty(); // Clear existing previews
-            filesToUpload = []; // Reset the files array
-            imageUploadErrorsDiv.empty(); // Clear any previous image errors
+            imagePreviewContainer.empty(); 
+            filesToUpload = []; 
+            imageUploadErrorsDiv.empty(); 
 
-            const files = Array.from(e.target.files); // Get selected files as an array
+            const files = Array.from(e.target.files); 
 
-            // Validate maximum file count
             if (files.length > 5) {
                 imageUploadErrorsDiv.text('You can upload a maximum of 5 images.');
-                imageUploadInput.val(''); // Clear the selected files from the input element
-                return; // Stop processing
+                imageUploadInput.val(''); 
+                return; 
             }
 
             files.forEach(file => {
-                // Validate file type (only images)
                 if (file.type.startsWith('image/')) {
-                    filesToUpload.push(file); // Add valid image file to the array for upload
-                    const reader = new FileReader(); // FileReader to display image preview
+                    filesToUpload.push(file); 
+                    const reader = new FileReader(); 
                     reader.onload = function(e) {
-                        // Create HTML for image preview with a remove button
                         const previewItem = `
                             <div class="image-preview-item">
                                 <img src="${e.target.result}" alt="Image Preview">
                                 <span class="remove-image" data-filename="${file.name}">&times;</span>
                             </div>
                         `;
-                        imagePreviewContainer.append(previewItem); // Add preview to the container
+                        imagePreviewContainer.append(previewItem); 
                     };
-                    reader.readAsDataURL(file); // Read file as Data URL for preview
+                    reader.readAsDataURL(file); 
                 } else {
                     imageUploadErrorsDiv.text('Only image files are allowed. Please select valid image files.');
-                    imageUploadInput.val(''); // Clear the input
-                    filesToUpload = []; // Clear the array
-                    return; // Stop processing this file
+                    imageUploadInput.val(''); 
+                    filesToUpload = []; 
+                    return; 
                 }
             });
         });
 
-        // Event listener for removing individual image previews
         imagePreviewContainer.on('click', '.remove-image', function() {
             const fileNameToRemove = $(this).data('filename');
-            // Filter out the file to be removed from the filesToUpload array
             filesToUpload = filesToUpload.filter(file => file.name !== fileNameToRemove);
-            $(this).parent().remove(); // Remove the preview item from the DOM
+            $(this).parent().remove(); 
 
-            // If all files are removed, clear the file input element as well
             if (filesToUpload.length === 0) {
                 imageUploadInput.val('');
             }
-            // Clear any max file count errors if the count is now valid
             if (filesToUpload.length <= 5) {
                 imageUploadErrorsDiv.empty();
             }
         });
 
-        // --- Form Submission Logic (AJAX) ---
         feedbackForm.on('submit', function(e) {
-            e.preventDefault(); // Prevent default browser form submission
+            e.preventDefault(); 
 
-            submitBtn.prop('disabled', true).find('.spinner-border').removeClass('d-none'); // Disable button, show spinner
-            alertMessages.empty(); // Clear any previous alert messages
-            displayFormErrors({}); // Clear all previous validation error messages
+            submitBtn.prop('disabled', true).find('.spinner-border').removeClass('d-none'); 
+            alertMessages.empty(); 
+            displayFormErrors({}); 
 
-            const formData = new FormData(this); // Create FormData object from the form
-            formData.delete('image_files'); // Remove the `name="image_files"` input value, as we'll add files manually
+            const formData = new FormData(this); 
+            formData.delete('image_files'); 
 
-            // Append each image from the `filesToUpload` array using Django formset naming convention
             filesToUpload.forEach((file, index) => {
-                // The name must match `related_name` in FeedbackImage model (`images`) and formset prefix
                 formData.append(`images-${index}-image`, file);
             });
 
-            // Add formset management fields (crucial for Django formset validation)
             formData.append('images-TOTAL_FORMS', filesToUpload.length);
             formData.append('images-INITIAL_FORMS', 0);
             formData.append('images-MIN_NUM_FORMS', 0);
-            formData.append('images-MAX_NUM_FORMS', 5); // Must match `max_num` in `forms.py`
+            formData.append('images-MAX_NUM_FORMS', 5); 
 
-            // Get CSRF token from the hidden input field
             const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
             if (csrfToken) {
-                formData.append('csrfmiddlewaretoken', csrfToken); // Add CSRF token to FormData
+                formData.append('csrfmiddlewaretoken', csrfToken); 
             } else {
                 showAlert('CSRF token missing. Cannot submit feedback.', 'danger');
                 submitBtn.prop('disabled', false).find('.spinner-border').addClass('d-none');
@@ -239,60 +216,55 @@
             }
 
             $.ajax({
-                url: "{% url 'APIs:feedback_submit_api' %}", // Django URL tag for API endpoint
+                url: "{% url 'APIs:feedback_submit_api' %}", 
                 type: 'POST',
                 data: formData,
-                processData: false, // Tell jQuery not to process the data (important for FormData)
-                contentType: false, // Tell jQuery not to set content type (FormData sets it correctly)
+                processData: false, 
+                contentType: false, 
                 success: function(response) {
-                    showAlert(response.message, 'success'); // Show success alert
-                    resetForm(); // Clear the form after successful submission
-                    loadFeedbackCarousel(); // Refresh the displayed feedback to include the new one
+                    showAlert(response.message, 'success'); 
+                    resetForm(); 
+                    loadFeedbackCarousel(); 
                 },
                 error: function(xhr, status, error) {
-                    const errorData = xhr.responseJSON; // Get error data from Django
+                    const errorData = xhr.responseJSON; 
                     let errorMessage = errorData.message || 'An unknown error occurred.';
 
                     if (errorData && errorData.errors) {
-                        displayFormErrors(errorData.errors); // Display specific field errors
+                        displayFormErrors(errorData.errors); 
                     }
-                    showAlert('Error: ' + errorMessage, 'danger'); // Show general error alert
+                    showAlert('Error: ' + errorMessage, 'danger'); 
                 },
                 complete: function() {
-                    // Re-enable button and hide spinner regardless of success or error
                     submitBtn.prop('disabled', false).find('.spinner-border').addClass('d-none');
                 }
             });
         });
 
-        // --- Feedback Carousel Display Logic ---
         function loadFeedbackCarousel() {
-            feedbackLoadingIndicator.removeClass('d-none'); // Show loading indicator
-            carouselInner.empty(); // Clear previous carousel items
-            noFeedbackMessage.addClass('d-none'); // Hide no feedback message
-            feedbackLoadError.addClass('d-none'); // Hide previous error message
-            feedbackCarousel.addClass('d-none'); // Hide carousel itself until populated
+            feedbackLoadingIndicator.removeClass('d-none'); 
+            carouselInner.empty(); 
+            noFeedbackMessage.addClass('d-none'); 
+            feedbackLoadError.addClass('d-none'); 
+            feedbackCarousel.addClass('d-none'); 
 
             $.ajax({
-                url: "{% url 'APIs:api_get_feedback' %}", // API endpoint to get feedback
+                url: "{% url 'APIs:api_get_feedback' %}", 
                 type: 'GET',
                 success: function(data) {
-                    feedbackLoadingIndicator.addClass('d-none'); // Hide loading indicator
+                    feedbackLoadingIndicator.addClass('d-none'); 
 
                     if (data.length === 0) {
-                        noFeedbackMessage.removeClass('d-none'); // Show 'no feedback' message
-                        return; // Exit if no data
+                        noFeedbackMessage.removeClass('d-none'); 
+                        return; 
                     }
 
-                    // Populate the Bootstrap Carousel with feedback data
                     data.forEach((feedback, index) => {
-                        const activeClass = index === 0 ? 'active' : ''; // First item is active
-                        // Generate HTML for feedback images
+                        const activeClass = index === 0 ? 'active' : ''; 
                         const imagesHtml = feedback.images.map(img => `
                             <img src="${img.image}" class="img-fluid rounded me-2 mb-2" alt="Feedback Image" style="max-height: 100px; object-fit: cover;">
-                        `).join(''); // Join image HTML strings
+                        `).join(''); 
 
-                        // Create the carousel item HTML
                         const carouselItem = `
                             <div class="carousel-item ${activeClass}">
                                 <div class="d-flex justify-content-center">
@@ -311,27 +283,19 @@
                                 </div>
                             </div>
                         `;
-                        carouselInner.append(carouselItem); // Add item to carousel inner
+                        carouselInner.append(carouselItem); 
                     });
-                    feedbackCarousel.removeClass('d-none'); // Show the carousel now that it has content
-
-                    // Initialize Bootstrap Carousel (if not using data-bs-ride="carousel")
-                    // If data-bs-ride="carousel" is on the div, you don't strictly need this,
-                    // but it can be useful for dynamic content.
-                    // var myCarousel = new bootstrap.Carousel(document.getElementById('feedbackCarousel'), {
-                    //     interval: 5000 // Auto-advance every 5 seconds
-                    // });
+                    feedbackCarousel.removeClass('d-none'); 
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading feedback:', xhr.responseText);
-                    feedbackLoadingIndicator.addClass('d-none'); // Hide loading
-                    feedbackLoadError.removeClass('d-none'); // Show error message
+                    feedbackLoadingIndicator.addClass('d-none');
+                    feedbackLoadError.removeClass('d-none'); 
                 }
             });
         }
 
-        // --- Initial Page Load Actions ---
-        loadFeedbackCarousel(); // Load feedback when the page is fully ready
+        loadFeedbackCarousel(); 
     });
 </script>
 
