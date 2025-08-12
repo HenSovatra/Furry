@@ -25,7 +25,6 @@ from django.views import View
 from .serializers import RegisteredCustomerSerializer
 from rest_framework.permissions import AllowAny
 from PetStore.forms import FeedbackForm,FeedbackImageFormSet
-from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch
 from django.db.models import Sum, F
 from django.http import JsonResponse
@@ -36,6 +35,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.decorators import api_view, authentication_classes
 import json
 from rest_framework import permissions
+from django.db.models import Q
 
 logger = logging.getLogger(__name__) 
 
@@ -492,7 +492,6 @@ def order_history_api(request):
 class ProductAdminViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductAdminSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter] 
     filterset_fields = ['category'] 
     search_fields = ['name', 'description'] 
 
@@ -503,7 +502,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class OrderAdminViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderAdminSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter] 
     filterset_fields = ['status'] 
     search_fields = ['id', 'billing_first_name', 'billing_email'] 
 
@@ -675,3 +673,26 @@ class PostViewSet(viewsets.ModelViewSet):
 @csrf_exempt
 def dispatch(self, *args, **kwargs):
     return super().dispatch(*args, **kwargs)
+
+
+
+
+def search_products(request):
+    query = request.GET.get('q', '')
+    products = []
+    if query:
+        products = Product.objects.filter(
+            Q(name__icontains=query) | Q(description__icontains=query)
+        )[:10] # Limit to 10 results for performance
+    
+    # Format the products into a list of dictionaries for JSON
+    results = [
+        {
+            'name': product.name,
+            'price': product.original_price,
+            'url': product.image.url # Assuming you have this method on your model
+        }
+        for product in products
+    ]
+
+    return JsonResponse(results, safe=False)

@@ -14,7 +14,57 @@
   <meta name="description" content="Pet Store HTML Website Template">
   {% include "css.html" %}
 </head>
+<style>
+  .overlay {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 1000; /* Make sure it's on top of everything */
+    left: 0;
+    top: 0;
+    background-color: rgba(0,0,0, 0.9);
+    overflow-x: hidden;
+    transition: 0.5s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.overlay-content {
+    position: relative;
+    top: 10%;
+    width: 80%;
+    max-width: 600px;
+    text-align: center;
+    margin-top: 30px;
+    color: white;
+}
+
+.overlay .close-btn {
+    position: absolute;
+    top: 20px;
+    right: 45px;
+    font-size: 60px;
+    color: #f1f1f1;
+    cursor: pointer;
+}
+
+/* Add some styles for the results */
+.search-result-item {
+    padding: 10px;
+    border-bottom: 1px solid #555;
+    text-align: left;
+}
+</style>
  <header>
+  <div id="search-overlay" class="overlay">
+    <div class="overlay-content">
+        <span class="close-btn" id="close-overlay">&times;</span>
+        <h2>Search Results</h2>
+        <div id="search-results-container">
+            </div>
+    </div>
+</div>
   <div class="modal fade" id="cartDialogModal" tabindex="-1" aria-labelledby="cartDialogModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -54,12 +104,14 @@
 
        <div class="col-sm-10 col-md-4 col-lg-7 d-sm-none d-none d-md-none d-xl-block d-lg-block">
          <div class="search-bar row justify-content-between bg-light p-2 rounded-4" style="height: 50px;">
-           <div class="col-11">
-             <form id="search-form" class="text-center" action="index.html" method="post">
-               <input type="text" class="form-control border-0 bg-transparent"
-                 placeholder="Search for more than 20,000 products">
-             </form>
-           </div>
+          <div class="col-11">
+              <form id="search-form" class="text-center" action="#" method="get">
+                  <input type="text" class="form-control border-0 bg-transparent"
+                        placeholder="Search for more than 20,000 products"
+                        id="search-input">
+              </form>
+          </div>
+
            <div class="col-1">
              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                <path fill="currentColor"

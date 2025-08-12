@@ -27,8 +27,9 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_51RnM
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_51RnMacFSxjjrivZy6mqoCqtGLW60MxThdv9tpoDuWw311KhKMZd0y9L4bYPX9Hwbq3WvYkFnfrNNLKDMziyQXxIr00WwtoAM2p')     # Replace with your test key
 
 
-BASE_URL = 'http://192.168.100.9:8000'
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_URL = 'http://127.0.0.1:8000'
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SECRET_KEY = 'django-insecure-83ep--xmw69)z%nipo^97%s_c=5)ztzotn4*@hrke-q32e8^m7'
 DEMO_API_ACCESS_TOKEN = 'e8f7b3a9c1d5f2a4b6c8d0e1f3a7b9c2d4e6f8a0b2c4d6e8f0a1b3c5d7e9f0a2'
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'APIs',
     'django_filters',
+    'jazzmin',
 ]
 
 REST_FRAMEWORK = {
@@ -100,7 +102,7 @@ WSGI_APPLICATION = 'AWSProject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
 
@@ -141,7 +143,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+
+STATIC_ROOT = os.path.join(os.path.dirname(BASE_DIR), 'collected_static')
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'), 
 ]

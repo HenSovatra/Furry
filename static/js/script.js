@@ -7,8 +7,9 @@
       var Body = $('body');
       Body.addClass('preloader-site');
     });
-    $(window).on('load', function() {
+    
       $('.preloader-wrapper').fadeOut();
+    $(window).on('load', function() {
       $('body').removeClass('preloader-site');
     });
   }
@@ -507,7 +508,6 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            alert(response.message); 
                             updateCartCount(response.cart_total_items);
 
                             $('#productQuickViewModal').modal('hide');
@@ -633,7 +633,7 @@
 
                     var item = 0;
                     response.forEach(function(product) {
-                        if (item>8)return;
+                        if (item>=8)return;
                         const productHtml = `
                             <div class="col">
                                 <div class="product-item mb-4">
@@ -715,11 +715,11 @@
 
                     var item = 0; 
                     response.forEach(function(product) {
-                        if(item >= 5) return; 
+                        if(item >= 4) return; 
                         const productHtml = `
-                            <div class="col">
+                            <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-6">
                                 <div class="product-item mb-4">
-                                    <figure>
+                                    <figure style="display: flex; justify-content: center;">
                                         <a href="#" class="open-product-modal" data-bs-toggle="modal" data-bs-target="#productQuickViewModal" data-product-id="${product.id}" title="${product.name}">
                                             <img src="${product.image}" alt="${product.name}" class="tab-image img-fluid rounded-3">
                                         </a>
@@ -863,3 +863,101 @@
     });
 
 })(jQuery);
+
+
+$(document).ready(function() {
+    const searchInput = $('#search-input');
+    const searchOverlay = $('#search-overlay');
+    const resultsContainer = $('#search-results-container');
+    const closeBtn = $('#close-overlay');
+    let timeout = null;
+
+    // Show the overlay
+    function showOverlay() {
+        searchOverlay.css('width', '100%');
+    }
+
+    // Hide the overlay
+    function hideOverlay() {
+        searchOverlay.css('width', '0%');
+    }
+
+    // Event listener for the close button
+    closeBtn.on('click', hideOverlay);
+    
+    // Event listener for the input field
+    searchInput.on('input', function() {
+        // Clear any previous timeout
+        clearTimeout(timeout);
+
+        const query = $(this).val().trim();
+
+        if (query.length > 0) {
+            // Wait for a short period before sending the request
+            timeout = setTimeout(() => {
+                fetchResults(query);
+            }, 300);
+        } else {
+            // If the input is empty, hide the overlay and clear results
+            hideOverlay();
+            resultsContainer.empty();
+        }
+    });
+
+    // Function to fetch results from Django view using $.ajax
+    function fetchResults(query) {
+        // Replace with your Django URL
+        const url = '/api/search_products/';
+
+        $.ajax({
+            url: url,
+            data: {
+                'q': query
+            },
+            dataType: 'json',
+            success: function(data) {
+                displayResults(data);
+                showOverlay();
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching search results:', textStatus, errorThrown);
+                resultsContainer.html('<p>An error occurred.</p>');
+                showOverlay();
+            }
+        });
+    }
+    
+    // Alternatively, a simpler $.get() call
+    /*
+    function fetchResults(query) {
+        $.get('/search_products/', { q: query }, function(data) {
+            displayResults(data);
+            showOverlay();
+        }).fail(function() {
+            console.error('Error fetching search results');
+            resultsContainer.html('<p>An error occurred.</p>');
+            showOverlay();
+        });
+    }
+    */
+
+    // Function to display the results in the overlay
+    function displayResults(products) {
+        resultsContainer.empty(); // Clear previous results
+
+        if (products.length === 0) {
+            resultsContainer.html('<p>No products found.</p>');
+            return;
+        }
+
+        const resultsHtml = products.map(product => `
+            <div class="search-result-item">
+                <h4 style="color:white">${product.name}</h4>
+                <p>Price: $${product.price}</p>
+                <a href="${product.url}" style="color:cyan">View Details</a>
+            </div>
+        `).join('');
+
+        resultsContainer.html(resultsHtml);
+    }
+});

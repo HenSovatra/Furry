@@ -104,20 +104,17 @@ class Product(models.Model):
         decimal_places=2, 
         null=True, 
         blank=True, 
-        help_text="Discounted price of the product (optional)."
     )
     slug = models.SlugField(
         max_length=200, 
         unique=True, 
         blank=True, 
-        help_text="A short, unique label for the product URL (auto-generated if left blank)."
     )
     description = models.TextField(blank=True, help_text="Detailed description of the product.")
     stock = models.IntegerField(default=0, help_text="Current stock quantity.")
     is_active = models.BooleanField(default=True, help_text="Whether this product is available for sale.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     category = models.ForeignKey(
         'Category', 
         on_delete=models.SET_NULL, 
@@ -126,15 +123,12 @@ class Product(models.Model):
         related_name='products', 
         help_text="The category this product belongs to."
     )
-
     class Meta:
         ordering = ['-created_at', 'name'] 
         verbose_name = "Product"
         verbose_name_plural = "Products"
-
     def __str__(self):
         return self.name
-
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
@@ -228,7 +222,6 @@ class Order(models.Model):
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     updated_at = models.DateTimeField(auto_now=True)
     payment_method = models.CharField(max_length=50, blank=True, null=True)
-
     billing_first_name = models.CharField(max_length=100, blank=True, null=True)
     billing_last_name = models.CharField(max_length=100, blank=True, null=True)
     billing_email = models.EmailField(blank=True, null=True)
@@ -239,7 +232,6 @@ class Order(models.Model):
     billing_state = models.CharField(max_length=100, blank=True, null=True)
     billing_zip_code = models.CharField(max_length=20, blank=True, null=True)
     billing_country = models.CharField(max_length=100, blank=True, null=True)
-
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField()
@@ -250,10 +242,7 @@ class Order(models.Model):
     state = models.CharField(max_length=100)
     zip_code = models.CharField(max_length=20)
     country = models.CharField(max_length=100)
-
     stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
-
-
     class Meta:
         ordering = ['-created_at']
 
@@ -282,7 +271,6 @@ class Feedback(models.Model):
                                help_text="Optional subject for the feedback.")
     message = models.TextField(help_text="The main feedback message.")
     submitted_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         verbose_name = "Feedback"
         verbose_name_plural = "Feedback"
